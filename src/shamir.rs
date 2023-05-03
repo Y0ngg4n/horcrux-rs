@@ -6,32 +6,30 @@
 
 use crate::tables::{EXP_TABLE, LOG_TABLE};
 use rand::{
-    rngs::{OsRng, StdRng, ThreadRng},
-    seq::SliceRandom,
-    thread_rng, Rng, SeedableRng,
+    rngs::{OsRng, StdRng},
+    seq::SliceRandom, Rng, SeedableRng,
 };
 
 const SHARE_OVERHEAD: usize = 1;
 
 
 struct Polynomial<'a> {
-    coefficients: &'a [u8],
+    coefficients: &'a mut [u8],
 }
 
 impl<'a> Polynomial<'a> {
-    pub fn new(&self, intercept: u8, degree: u8) -> Self {
-        Self {
+    pub fn new(intercept: u8, degree: u8) -> Polynomial<'a> {
+        let polynomial = Polynomial {
             coefficients: &mut [degree + 1],
         };
     
         // Ensure the intercept is set
-        self.coefficients[0] = intercept;
+        polynomial.coefficients.first() = intercept;
     
         // Assign random coefficients to the polynomial
         let mut rng = OsRng;
-        rng.try_fill(&mut polynomial.coefficients[1..])?;
-    
-        Self
+        rng.try_fill(&mut polynomial.coefficients[1..]);
+        polynomial
     }
 
     fn evaluate(&self, x: u8) -> u8 {
@@ -53,7 +51,7 @@ impl<'a> Polynomial<'a> {
 
 fn divide(a: u8, b: u8) -> u8 {
     if b == 0 {
-        panic!("divide by zero");
+        panic!("divide by zero");//Todo enum error
     }
 
     let good_value: u8;
@@ -128,7 +126,7 @@ fn split<'a>(secret: &[u8], parts: &'a [u8], threshold: u8) -> Result<Vec<Vec<u8
     // Allocate the output array, initialize the final byte
     // of the output with the offset. The representation of each
     // output is {y1, y2, .., yN, x}.
-    let output: Vec<Vec<u8>> = (0..parts.len())
+    let mut output: Vec<Vec<u8>> = (0..parts.len())
         .map(|index: usize| {
             let mut slice: Vec<u8> = vec![0u8; secret.len() + 1];
             slice[index] = x_coordinates[index] + 1;
@@ -137,34 +135,17 @@ fn split<'a>(secret: &[u8], parts: &'a [u8], threshold: u8) -> Result<Vec<Vec<u8
         .collect();
 
 
-    for (idx, &val) in secret.iter() {
+    secret.iter().enumerate().for_each(|(idx, &val)| {
         let p = Polynomial::new(val, (threshold - 1));
 
         // Generate a `parts` number of (x,y) pairs
         // We cheat by encoding the x value once as the final index,
         // so that it only needs to be stored once.
-        for i in 0..parts {
-            let x = (x_coordinates[i] as u8) + 1;
-            let y = p.evaluate(x);
-            out[i][idx] = y;
+        for i in 0..parts.len() {
+            let mut x: u8 = (x_coordinates[i] as u8) + 1;
+            let mut y = p.evaluate(x);
+            output[i][idx] = y;
         }
-    }
-
-    // secret
-    //     .iter()
-    //     .enumerate()
-    //     .map(|(index, &val)| {
-    //         (0..parts)
-    //             .map(|i| {
-    //                 let x = x_coordinates[i] + 1;
-    //                 let polynomial: Polynomial::new(val, threshold - 1);
-    //                     .and_then(|p| Ok(p.evaluate(x)))
-    //                     .unwrap_or_default()
-    //             })
-    //             .collect()
-    //     })
-    //     .fold(out, |mut acc, ys| {
-    //         ys.into_iter().enumerate().for_each(|(i, y)| acc[i].push(y));
-    //         acc
-    //     });
+    });
+    Ok(output)
 }
