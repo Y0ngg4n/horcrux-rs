@@ -1,4 +1,5 @@
-pub mod shamir;
+pub mod commands;
+
 
 fn main() {
     println!("Hello, world!");
