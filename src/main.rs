@@ -1,4 +1,6 @@
-use clap::{Arg, ArgAction, Command};
+use std::{io::{self, BufRead}, fs::File, path::PathBuf};
+
+use clap::{Arg, ArgAction, Command, builder::FalseyValueParser, value_parser};
 
 pub mod commands;
 
@@ -13,12 +15,13 @@ fn main() {
         .subcommand(
             Command::new("split")
                 .long_flag("split")
-                .about("Splits a file into shards.")
+                .about("Split a secret into encrypted file shards")
                 .arg(
                     Arg::new("file")
+                        .required(false)
                         .short('f')
                         .long("file")
-                        .conflicts_with("pipe")
+                        .conflicts_with("piped")
                         .action(ArgAction::Append)
                 )
                 .arg(
@@ -26,34 +29,35 @@ fn main() {
                         .required(true)
                         .short('s')
                         .long("shards")
-                        .help("desired number of file shards")
+                        .help("Desired number of shards to split the secret into")
                         .action(ArgAction::Set)
-                        .num_args(1..1),
                 )
                 .arg(
                     Arg::new("threshold")
                         .required(true)
                         .long("threshold")
                         .short('t')
-                        .help("number of horcruxes required to recover the secret")
+                        .help("Number of horcrux shards required to recover the secret")
                         .action(ArgAction::Set)
-                        .num_args(1..1),
                 )
                 .arg(
                     Arg::new("outdir")
+                        .required(false)
                         .short('o')
                         .long("outdir")
-                        .help("directory location of where to set put the horcruxes. a new directory will be created if none exists.")
+                        .default_value(".")
+                        .help("Directory to save the horcruxes to, a new directory will be created if specified does not exist")
                         .action(ArgAction::Set)
-                        .num_args(1..1),
+                        .num_args(1..),
                 )
                 .arg(
-                    Arg::new("pipe")
-                        .required(true)
-                        .long("pipe")
-                        .short('p')
-                        .help("read input from command line")
-                        .action(ArgAction::Set)),
+                    Arg::new("piped")
+                    .required(false)
+                    .long("piped")
+                    .short('p')
+                    .conflicts_with("file")
+                    .value_parser(value_parser!(bool))
+                    .help("Use this to pipe the input from command line")),
         )
         .subcommand(
             Command::new("bind")
@@ -61,58 +65,75 @@ fn main() {
                 .about("Recovers the secret from the")
                 .arg(
                     Arg::new("directory")
-                        .conflicts_with("pipe")
-                        .long("directory")
-                        .short('d')
+                        .required(false)
                         .help("location of directory that contains the horcruxes")
+                        .short('d')
+                        .long("directory")
+                        .conflicts_with("piped")
+                        .default_value(".")
+                        .num_args(1..)
                         .action(ArgAction::Append)
                 )
                 .arg(
-                    Arg::new("pipe")
-                        .required(true)
-                        .long("pipe")
+                    Arg::new("piped")
+                        .required(false)
                         .short('p')
-                        .conflicts_with("directory")
-                        .help("optional argument to read input from command line")),
+                        .value_parser(value_parser!(bool))
+                        .long("piped")
+                        .help("Set this flag to true to read input from command line")
+                        .conflicts_with("directory")),
         )
         .get_matches();
 
     match matches.subcommand() {
-        Some(("split", sync_matches)) => {
-            if sync_matches.contains_id("search") {
-                let packages: Vec<_> = sync_matches
-                    .get_many::<String>("search")
-                    .expect("contains_id")
-                    .map(|s| s.as_str())
-                    .collect();
-                let values = packages.join(", ");
-                println!("Searching for {values}...");
-                return;
+        Some(("split", sub_matches)) => {
+            let mut file = sub_matches.get_one::<String>("file").map(|s| s.as_str());
+            let shards = sub_matches.get_one::<String>("shards").map(|s| s.as_str());
+            let threshold = sub_matches
+                .get_one::<String>("threshold")
+                .map(|s| s.as_str());
+            let outdir = sub_matches.get_one::<String>("outdir").map(|s| s.as_str());
+            let piped = sub_matches.get_one::<bool>("piped").unwrap_or(&false);
+
+            //TODO if piped then check this
+            if file.is_some() && !piped {
+                let path = PathBuf::from(file.unwrap());
+                if path.is_file() {
+
+                } else {
+                }
             }
 
-            let packages: Vec<_> = sync_matches
-                .get_many::<String>("package")
-                .expect("is present")
-                .map(|s| s.as_str())
-                .collect();
-            let values = packages.join(", ");
+            if piped.to_owned() && file.is_none() {
+                //Check if piped input is NOT a directory or something funny
+                //Give to bind function then show message
+                let input_file = io::stdin()
+                    .lock()
+                    .lines()
+                    .fold("".to_string(), |acc, line| acc + &line.unwrap() + "\n");
 
-            if sync_matches.get_flag("info") {
-                println!("Retrieving info for {values}...");
-            } else {
-                println!("Installing {values}...");
+                //Invoke horcrux split
+                println!(" STD SPLITTING YOUR FILE!")
             }
         }
-        Some(("bind", query_matches)) => {
-            if let Some(packages) = query_matches.get_many::<String>("info") {
-                let comma_sep = packages.map(|s| s.as_str()).collect::<Vec<_>>().join(", ");
-                println!("Retrieving info for {comma_sep}...");
-            } else if let Some(queries) = query_matches.get_many::<String>("search") {
-                let comma_sep = queries.map(|s| s.as_str()).collect::<Vec<_>>().join(", ");
-                println!("Searching Locally for {comma_sep}...");
-            } else {
-                println!("Displaying all locally installed packages...");
+        Some(("bind", sub_matches)) => {
+            let mut directory = sub_matches.get_one::<String>("directory").map(|s| s.as_str());
+            let piped = sub_matches.get_one::<bool>("piped").unwrap_or(&false);
+            //TODO if piped then check this
+            if directory.is_some() && !piped {
+
             }
+
+            if piped.to_owned() && directory.is_none() {
+                //Check if piped input is NOT a file or something funny
+                let input = io::stdin()
+                    .lock()
+                    .lines()
+                    .fold("".to_string(), |acc, line| acc + &line.unwrap() + "\n");
+                println!("BINDING YOUR FILE! std {}", input)
+            }
+            dbg!("DONE!");
+
         }
         _ => unreachable!(), // If all subcommands are defined above, anything else is unreachable
     }
