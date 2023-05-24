@@ -7,8 +7,8 @@ pub mod commands;
 fn main() {
     let matches = Command::new("hx")
         .version("0.1") //Todo make this env variable
-        .about("Make your command line a little more magical! Horcrux Split a file into encrypted parts, set a threshold to recover them.")
-        .long_about("Make your command line a little more magical! Horcrux Split a file into encrypted parts, set a threshold to recover them.")
+        .about("Utility to split a file into n number of encrypted secrets - no password needed.")
+        .long_about("Make your command line a little more magical! Horcrux splits a file into encrypted shards and requires a set threshold to recover them.")
         .subcommand_required(true)
         .arg_required_else_help(true)
         .author("Author")
@@ -21,7 +21,6 @@ fn main() {
                         .required(false)
                         .short('f')
                         .long("file")
-                        .conflicts_with("piped")
                         .action(ArgAction::Append)
                 )
                 .arg(
@@ -49,15 +48,7 @@ fn main() {
                         .help("Directory to save the horcruxes to, a new directory will be created if specified does not exist")
                         .action(ArgAction::Set)
                         .num_args(1..),
-                )
-                .arg(
-                    Arg::new("piped")
-                    .required(false)
-                    .long("piped")
-                    .short('p')
-                    .conflicts_with("file")
-                    .value_parser(value_parser!(bool))
-                    .help("Use this to pipe the input from command line")),
+                ),
         )
         .subcommand(
             Command::new("bind")
@@ -69,19 +60,9 @@ fn main() {
                         .help("location of directory that contains the horcruxes")
                         .short('d')
                         .long("directory")
-                        .conflicts_with("piped")
-                        .default_value(".")
                         .num_args(1..)
                         .action(ArgAction::Append)
                 )
-                .arg(
-                    Arg::new("piped")
-                        .required(false)
-                        .short('p')
-                        .value_parser(value_parser!(bool))
-                        .long("piped")
-                        .help("Set this flag to true to read input from command line")
-                        .conflicts_with("directory")),
         )
         .get_matches();
 
@@ -93,46 +74,35 @@ fn main() {
                 .get_one::<String>("threshold")
                 .map(|s| s.as_str());
             let outdir = sub_matches.get_one::<String>("outdir").map(|s| s.as_str());
-            let piped = sub_matches.get_one::<bool>("piped").unwrap_or(&false);
 
-            //TODO if piped then check this
-            if file.is_some() && !piped {
+            //If file arg not found then check std in.
+            if file.is_some() {
                 let path = PathBuf::from(file.unwrap());
                 if path.is_file() {
-
+                    println!("Found file!")
                 } else {
+                    println!("Not a file!")
                 }
-            }
-
-            if piped.to_owned() && file.is_none() {
-                //Check if piped input is NOT a directory or something funny
-                //Give to bind function then show message
+            } else {
                 let input_file = io::stdin()
-                    .lock()
-                    .lines()
-                    .fold("".to_string(), |acc, line| acc + &line.unwrap() + "\n");
-
-                //Invoke horcrux split
-                println!(" STD SPLITTING YOUR FILE!")
+                .lock()
+                .lines()
+                .fold("".to_string(), |acc, line| acc + &line.unwrap() + "\n");
+            println!("SPLITTING YOUR FILE! std {}", input_file)
             }
         }
         Some(("bind", sub_matches)) => {
             let mut directory = sub_matches.get_one::<String>("directory").map(|s| s.as_str());
-            let piped = sub_matches.get_one::<bool>("piped").unwrap_or(&false);
             //TODO if piped then check this
-            if directory.is_some() && !piped {
+            if directory.is_some() {
 
-            }
-
-            if piped.to_owned() && directory.is_none() {
-                //Check if piped input is NOT a file or something funny
+            } else {
                 let input = io::stdin()
                     .lock()
                     .lines()
                     .fold("".to_string(), |acc, line| acc + &line.unwrap() + "\n");
                 println!("BINDING YOUR FILE! std {}", input)
             }
-            dbg!("DONE!");
 
         }
         _ => unreachable!(), // If all subcommands are defined above, anything else is unreachable
