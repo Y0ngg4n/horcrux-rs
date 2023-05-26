@@ -8,7 +8,7 @@ fn main() {
     let matches = Command::new("hx")
         .version("0.1") //Todo make this env variable
         .about("Utility to split a file into n number of encrypted secrets - no password needed.")
-        .long_about("Make your command line a little more magical! Horcrux splits a file into encrypted shards and requires a set threshold to recover them.")
+        .long_about("Horcrust adds magic to your command line, Use it to splits a file into a desired number encrypted shards. Set a required threshold in order to recover them - no password necessary.")
         .subcommand_required(true)
         .arg_required_else_help(true)
         .author("Author")

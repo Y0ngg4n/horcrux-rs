@@ -1,5 +1,5 @@
 use core::time;
-use std::{time::{SystemTime, UNIX_EPOCH}, path::Path, fs::{self, File}, error::Error, io::Write};
+use std::{time::{SystemTime, UNIX_EPOCH}, path::Path, fs::{self, File, OpenOptions}, error::Error, io::Write};
 
 //TODO here stdin: Strategy for handling pipeline is check if 
 //Input string is greater than 255 characters if it is then we can safely assume 
@@ -61,7 +61,10 @@ pub fn split(path: &str, destination: &str, total: u8, threshold: u8) -> Result<
         let horcrux_path = Path::new(destination).join(&horcrux_filename);
         println!("creating {:?}", horcrux_path);
 
-        let horcrux_file = File::create(&horcrux_path)?;
+        let horcrux_file: File = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open(&horcrux_path)?;
         horcrux_files.push(horcrux_file);
 
         let contents = formatted_header(index, total, header_bytes);
