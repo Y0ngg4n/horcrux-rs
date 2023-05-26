@@ -1,41 +1,36 @@
 use std::{time::SystemTime, path::{PathBuf, Path}, fs::File, io::Error};
 use std::io::{self, BufRead, Seek, SeekFrom};
-use serde_json::{self, Error as JsonError};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
-struct HorcruxHeader {
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct HorcruxHeader {
     canonical_file_name: String,
     timestamp: SystemTime,
-    index: i32,
-    total: i32,
-    threshold: i32,
+    index: u8,
+    total: u8,
+    threshold: u8,
     key_fragment: Vec<u8>
 }
 
-#[derive(Default)]
-struct Horcrux<'a> {
+pub struct Horcrux {
     path: PathBuf,
     header: HorcruxHeader,
-    file: &'a File,
+    file: File,
 }
 
 
-impl<'a> Horcrux<'a> {
+impl Horcrux {
     pub fn new(&self, path: PathBuf) -> Result<Horcrux, std::io::Error> {
         let mut file = File::open(path)?;
-
         let mut header = get_header(&mut file)?;
         let horcrux = Horcrux {
             path: path.to_owned(),
             header: header,
-            file: &file,
+            file: file,
         };
         Ok(horcrux)
-    
     }
-
-    
-
 }
 
 fn get_header(file: &mut File) -> Result<HorcruxHeader, io::Error> {
@@ -55,10 +50,8 @@ fn get_header(file: &mut File) -> Result<HorcruxHeader, io::Error> {
                 let header_line = header_line_result?;
                 let header_bytes = header_line.as_bytes();
                 bytes_before_body += header_bytes.len() + 1;
-
-                if let Err(err) = serde_json::from_slice(header_bytes, &mut current_header) {
-                    return Err(io::Error::new(io::ErrorKind::Other, err.to_string()));
-                }
+                
+                
 
                 reader.lines().next(); // Skip the body line
                 bytes_before_body += line_bytes.len() + 1;
