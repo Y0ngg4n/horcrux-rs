@@ -1,38 +1,59 @@
-use std::io::{Read, Result};
-use aes::Aes256;
-use aes::cipher::generic_array::GenericArray;
-use aes::cipher::{NewBlockCipher, StreamCipher};
-use rand::{RngCore, thread_rng};
+// use std::io::{Read, Result};
+// use aes::Aes256;
+// use aes::cipher::generic_array::GenericArray;
+// use aes::cipher::{BlockCipher, StreamCipher, KeyInit};
+// use chacha20poly1305::XChaCha20Poly1305;
+// use rand::{RngCore, thread_rng};
 
-pub fn crypto_reader<R: Read>(r: R, key: &[u8]) -> Result<impl Read> {
-    let block_cipher = Aes256::new(GenericArray::from_slice(key));
-    let iv = generate_iv(block_cipher.block_size());
 
-    let mut stream_cipher = aes::stream_cipher::ctr::Ctr8::new(&block_cipher, GenericArray::from_slice(&iv));
+// fn encrypt_small_file(
+//     filepath: &str,
+//     dist: &str,
+//     key: &[u8; 32],
+//     nonce: &[u8; 24],
+// ) -> Result<(), std::io::Error> {
+//     let cipher = XChaCha20Poly1305::new(key.into());
 
-    Ok(CryptoReader {
-        reader: r,
-        stream_cipher,
-    })
-}
+//     let file_data = std::fs::read(filepath)?;
 
-fn generate_iv(block_size: usize) -> Vec<u8> {
-    let mut iv = vec![0; block_size];
-    thread_rng().fill_bytes(&mut iv);
-    iv
-}
+//     let encrypted_file = cipher
+//         .encrypt(nonce.into(), file_data.as_ref())
+//         .map_err(|err| err!("Encrypting small file: {}", err))?;
 
-struct CryptoReader<R: Read> {
-    reader: R,
-    stream_cipher: aes::stream_cipher::ctr::Ctr8<Aes256>,
-}
+//     std::fs::write(&dist, encrypted_file)?;
 
-impl<R: Read> Read for CryptoReader<R> {
-    fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
-        let read_bytes = self.reader.read(buf)?;
+//     Ok(())
+// }
 
-        self.stream_cipher.apply_keystream(&mut buf[..read_bytes]);
+// pub fn crypto_reader<R: Read>(r: R, key: &[u8]) -> Result<impl Read> {
+//     let block_cipher = Aes256::new(GenericArray::from_slice(key));
+//     let iv = generate_iv(block_cipher);
 
-        Ok(read_bytes)
-    }
-}
+//     let mut stream_cipher = aes::stream_cipher::ctr::Ctr8::new(&block_cipher, GenericArray::from_slice(&iv));
+//     aes::
+//     Ok(CryptoReader {
+//         reader: r,
+//         stream_cipher,
+//     })
+// }
+
+// fn generate_iv(block_size: usize) -> Vec<u8> {
+//     let mut iv = vec![0; block_size];
+//     thread_rng().fill_bytes(&mut iv);
+//     iv
+// }
+
+// struct CryptoReader<R: Read> {
+//     reader: R,
+//     stream_cipher: aes::stream_cipher::ctr::Ctr8<Aes256>,
+// }
+
+// impl<R: Read> Read for CryptoReader<R> {
+//     fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
+//         let read_bytes = self.reader.read(buf)?;
+
+//         self.stream_cipher.apply_keystream(&mut buf[..read_bytes]);
+
+//         Ok(read_bytes)
+//     }
+// }

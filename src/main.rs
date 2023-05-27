@@ -2,6 +2,8 @@ use std::{io::{self, BufRead}, fs::File, path::PathBuf};
 
 use clap::{Arg, ArgAction, Command, builder::FalseyValueParser, value_parser};
 
+use crate::commands::split::split;
+
 pub mod commands;
 
 fn main() {
@@ -29,14 +31,16 @@ fn main() {
                         .short('s')
                         .long("shards")
                         .help("Desired number of shards to split the secret into")
+                        .value_parser(value_parser!(u8))
                         .action(ArgAction::Set)
                 )
                 .arg(
                     Arg::new("threshold")
                         .required(true)
-                        .long("threshold")
                         .short('t')
+                        .long("threshold")
                         .help("Number of horcrux shards required to recover the secret")
+                        .value_parser(value_parser!(u8))
                         .action(ArgAction::Set)
                 )
                 .arg(
@@ -69,17 +73,18 @@ fn main() {
     match matches.subcommand() {
         Some(("split", sub_matches)) => {
             let mut file = sub_matches.get_one::<String>("file").map(|s| s.as_str());
-            let shards = sub_matches.get_one::<String>("shards").map(|s| s.as_str());
-            let threshold = sub_matches
-                .get_one::<String>("threshold")
-                .map(|s| s.as_str());
+            let shards: Option<&u8> = sub_matches.get_one("shards");
+            let threshold: Option<&u8> = sub_matches.get_one("threshold");
             let outdir = sub_matches.get_one::<String>("outdir").map(|s| s.as_str());
 
             //If file arg not found then check std in.
             if file.is_some() {
                 let path = PathBuf::from(file.unwrap());
+                let x = shards.unwrap().to_owned();
                 if path.is_file() {
-                    println!("Found file!")
+                    println!("Found file!");
+                    let result = split(&path.to_str().unwrap(), outdir.unwrap(), x, threshold.unwrap().to_owned());
+                    println!("DONE!!!!")
                 } else {
                     println!("Not a file!")
                 }

@@ -1,29 +1,38 @@
 use core::time;
-use std::{time::{SystemTime, UNIX_EPOCH}, path::Path, fs::{self, File, OpenOptions}, error::Error, io::Write};
+use std::{
+    error::Error,
+    fs::{self, File, OpenOptions},
+    io::Write,
+    path::Path,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
-//TODO here stdin: Strategy for handling pipeline is check if 
-//Input string is greater than 255 characters if it is then we can safely assume 
+//TODO here stdin: Strategy for handling pipeline is check if
+//Input string is greater than 255 characters if it is then we can safely assume
 // what was passed is a the string contents of a file. If it's less than we check if it's a directory and then
-// we create 
+// we create
 use rand::RngCore;
-use sharks::{ Sharks, Share };
+use sharks::{Share, Sharks};
 
 use super::horcrux::HorcruxHeader;
 
-
-
-
-pub fn split(path: &str, destination: &str, total: u8, threshold: u8) -> Result<(), Box<dyn Error>> {
+pub fn split(
+    path: &str,
+    destination: &str,
+    total: u8,
+    threshold: u8,
+) -> Result<(), Box<dyn Error>> {
     let key = generate_key();
     if !key.is_some() {
         //Return err
+        println!("UH OH COULD NOT GENERATE KEY")
     }
     let sharks = Sharks(threshold);
     // Obtain an iterator over the shares for secret [1, 2, 3, 4]
     let dealer = sharks.dealer(key.unwrap().as_slice());
     // Get 10 shares
     let fragments: Vec<Share> = dealer.take(total as usize).collect();
-    
+
     let timestamp = SystemTime::now();
 
     let destination_dir = Path::new(destination);
@@ -33,22 +42,26 @@ pub fn split(path: &str, destination: &str, total: u8, threshold: u8) -> Result<
         //Return error
     }
     //Open file
-    let file = File::open(path);
-    let original_filename = Path::new(path).file_name().unwrap().to_string_lossy().to_string();
-    let mut horcrux_files:Vec<File> = Vec::with_capacity(total as usize);
+    let file = File::open(path)?;
+    let original_filename = Path::new(path)
+        .file_name()
+        .unwrap()
+        .to_string_lossy()
+        .to_string();
+    let mut horcrux_files: Vec<File> = Vec::with_capacity(total as usize);
 
     for i in 0..total {
         let index = i + 1;
         let fragment = Vec::from(&fragments[i as usize]);
         let header = HorcruxHeader {
-            canonical_file_name: original_filename,
+            canonical_file_name: original_filename.to_owned(),
             timestamp: timestamp,
             index: index,
             total: total,
             threshold: threshold,
-            key_fragment: fragment
+            key_fragment: fragment,
         };
-        
+
         //originalFilename := filepath.Base(path)
         let header_bytes: Vec<u8> = serde_json::to_vec(&header)?;
 
@@ -57,7 +70,10 @@ pub fn split(path: &str, destination: &str, total: u8, threshold: u8) -> Result<
             .unwrap()
             .to_string_lossy();
 
-        let horcrux_filename = format!("{}_{}_of_{}.horcrux", original_filename_without_ext, index, total);
+        let horcrux_filename = format!(
+            "{}_{}_of_{}.horcrux",
+            original_filename_without_ext, index, total
+        );
         let horcrux_path = Path::new(destination).join(&horcrux_filename);
         println!("creating {:?}", horcrux_path);
 
@@ -72,18 +88,17 @@ pub fn split(path: &str, destination: &str, total: u8, threshold: u8) -> Result<
         fs::write(&horcrux_path, contents)?;
     }
 
-    let mut reader = File::open(path)?;
-    let mut reader = crypto_reader(&mut reader, &key)?;
+    // let mut reader = File::open(path)?;
+    // let mut reader = crypto_reader(&mut reader, &key)?;
 
-    let writers: Vec<&mut dyn Write> = horcrux_files.iter_mut().map(|f| f).collect();
-    let mut writer = std::io::BufWriter::new(std::io::sink());
-    for w in writers {
-        writer.get_mut().extend(w);
-    }
-    std::io::copy(&mut reader, &mut writer)?;
+    // let writers: Vec<&mut dyn Write> = horcrux_files.iter_mut().map(|f| f).collect();
+    // let mut writer = std::io::BufWriter::new(std::io::sink());
+    // for w in writers {
+    //     writer.get_mut().extend(w);
+    // }
+    // std::io::copy(&mut reader, &mut writer)?;
     Ok(())
 }
-
 
 fn generate_key() -> Option<Vec<u8>> {
     let mut key = vec![0; 32];
@@ -94,14 +109,7 @@ fn generate_key() -> Option<Vec<u8>> {
 //Refactor this into the struct and call it as a method
 fn formatted_header(index: u8, total: u8, header_bytes: Vec<u8>) -> String {
     let remaining = total - 1;
-    let file = format!("# THIS FILE IS A HORCRUX.
-    # IT IS ONE OF {total} HORCRUXES THAT EACH CONTAIN PART OF AN ORIGINAL FILE.
-    # THIS IS HORCRUX NUMBER {index}.
-    # IN ORDER TO RESURRECT THIS ORIGINAL FILE YOU MUST FIND THE OTHER {remaining} HORCRUXES AND THEN BIND THEM USING THE PROGRAM FOUND AT THE FOLLOWING URL
-    # TODO
-    
-    -- HEADER --
-    {header_bytes}
-    -- BODY --");
-    return file
+    let bytes = String::from_utf8(header_bytes).unwrap();
+    let file = format!("?? THIS FILE IS A HORCRUX. \n?? IT IS ONE OF {total} HORCRUXES THAT EACH CONTAIN PART OF AN ORIGINAL FILE. \n?? THIS IS HORCRUX NUMBER {index} of {total}. \n?? IN ORDER TO RESURRECT THIS ORIGINAL FILE YOU MUST FIND THE OTHER {remaining} HORCRUXES AND THEN BIND THEM USING THE PROGRAM FOUND AT THE FOLLOWING URL \n?? https://github.com \n \n-- HEADER -- \n{bytes} \n-- BODY --");
+    return file;
 }
