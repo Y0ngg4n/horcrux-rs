@@ -10,6 +10,7 @@ pub struct HorcruxHeader {
     pub index: u8,
     pub total: u8,
     pub threshold: u8,
+    #[serde(with = "serde_bytes")]
     pub key_fragment: Vec<u8>
 }
 

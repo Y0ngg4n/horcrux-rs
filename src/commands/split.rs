@@ -4,7 +4,7 @@ use std::{
     fs::{self, File, OpenOptions},
     io::Write,
     path::Path,
-    time::{SystemTime, UNIX_EPOCH},
+    time::{SystemTime, UNIX_EPOCH}, collections::HashMap,
 };
 
 //TODO here stdin: Strategy for handling pipeline is check if
@@ -12,6 +12,7 @@ use std::{
 // what was passed is a the string contents of a file. If it's less than we check if it's a directory and then
 // we create
 use rand::RngCore;
+use serde_bytes::ByteBuf;
 use sharks::{Share, Sharks};
 
 use super::horcrux::HorcruxHeader;
@@ -63,7 +64,7 @@ pub fn split(
         };
 
         //originalFilename := filepath.Base(path)
-        let header_bytes: Vec<u8> = serde_json::to_vec(&header)?;
+        let json_header = serde_json::to_string(&header)?;
 
         let original_filename_without_ext = Path::new(&original_filename)
             .file_stem()
@@ -83,7 +84,7 @@ pub fn split(
             .open(&horcrux_path)?;
         horcrux_files.push(horcrux_file);
 
-        let contents = formatted_header(index, total, header_bytes);
+        let contents = formatted_header(index, total, json_header);
 
         fs::write(&horcrux_path, contents)?;
     }
@@ -107,9 +108,8 @@ fn generate_key() -> Option<Vec<u8>> {
 }
 
 //Refactor this into the struct and call it as a method
-fn formatted_header(index: u8, total: u8, header_bytes: Vec<u8>) -> String {
+fn formatted_header(index: u8, total: u8, json_header: String) -> String {
     let remaining = total - 1;
-    let bytes = String::from_utf8(header_bytes).unwrap();
-    let file = format!("?? THIS FILE IS A HORCRUX. \n?? IT IS ONE OF {total} HORCRUXES THAT EACH CONTAIN PART OF AN ORIGINAL FILE. \n?? THIS IS HORCRUX NUMBER {index} of {total}. \n?? IN ORDER TO RESURRECT THIS ORIGINAL FILE YOU MUST FIND THE OTHER {remaining} HORCRUXES AND THEN BIND THEM USING THE PROGRAM FOUND AT THE FOLLOWING URL \n?? https://github.com \n \n-- HEADER -- \n{bytes} \n-- BODY --");
+    let file = format!("?? THIS FILE IS A HORCRUX. \n?? IT IS ONE OF {total} HORCRUXES THAT EACH CONTAIN PART OF AN ORIGINAL FILE. \n?? THIS IS HORCRUX NUMBER {index} of {total}. \n?? IN ORDER TO RESURRECT THIS ORIGINAL FILE YOU MUST FIND THE OTHER {remaining} HORCRUXES AND THEN BIND THEM USING THE PROGRAM FOUND AT THE FOLLOWING URL \n?? https://github.com \n \n-- HEADER -- \n{json_header} \n-- BODY --");
     return file;
 }
