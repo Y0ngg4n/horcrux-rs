@@ -1,21 +1,19 @@
-use core::time;
 use std::{
     error::Error,
     fs::{self, File, OpenOptions},
-    io::Write,
+    io::{Write, BufWriter, Read, BufReader},
     path::Path,
-    time::{SystemTime, UNIX_EPOCH}, collections::HashMap,
+    time::{SystemTime}, sync::{Arc, Mutex}, borrow::BorrowMut, cell::RefCell
 };
 
 //TODO here stdin: Strategy for handling pipeline is check if
 //Input string is greater than 255 characters if it is then we can safely assume
 // what was passed is a the string contents of a file. If it's less than we check if it's a directory and then
 // we create
-use rand::RngCore;
-use serde_bytes::ByteBuf;
+use rand::{RngCore, rngs::OsRng};
 use sharks::{Share, Sharks};
 
-use super::horcrux::HorcruxHeader;
+use super::{horcrux::HorcruxHeader, utils::encrypt_small_file};
 
 pub fn split(
     path: &str,
@@ -23,14 +21,18 @@ pub fn split(
     total: u8,
     threshold: u8,
 ) -> Result<(), Box<dyn Error>> {
-    let key = generate_key();
+    let mut key = generate_key();
+    
+    
+    let sharks = Sharks(threshold);
     if !key.is_some() {
         //Return err
         println!("UH OH COULD NOT GENERATE KEY")
     }
-    let sharks = Sharks(threshold);
+    let clone = key.clone();
+    let secret: Result<[u8; 32], _> = key.unwrap().as_slice().try_into();
     // Obtain an iterator over the shares for secret [1, 2, 3, 4]
-    let dealer = sharks.dealer(key.unwrap().as_slice());
+    let dealer = sharks.dealer(clone.unwrap().as_slice());
     // Get 10 shares
     let fragments: Vec<Share> = dealer.take(total as usize).collect();
 
@@ -42,13 +44,14 @@ pub fn split(
     } else if !destination_dir.is_dir() {
         //Return error
     }
-    //Open file
-    let file = File::open(path)?;
+    
     let original_filename = Path::new(path)
         .file_name()
         .unwrap()
         .to_string_lossy()
         .to_string();
+
+    //Todo hashmap this fucker
     let mut horcrux_files: Vec<File> = Vec::with_capacity(total as usize);
 
     for i in 0..total {
@@ -64,7 +67,7 @@ pub fn split(
         };
 
         //originalFilename := filepath.Base(path)
-        let json_header = serde_json::to_string(&header)?;
+        let json_header = serde_json::to_string_pretty(&header)?;
 
         let original_filename_without_ext = Path::new(&original_filename)
             .file_stem()
@@ -81,6 +84,7 @@ pub fn split(
         let horcrux_file: File = OpenOptions::new()
             .create(true)
             .write(true)
+            .append(true)
             .open(&horcrux_path)?;
         horcrux_files.push(horcrux_file);
 
@@ -88,28 +92,29 @@ pub fn split(
 
         fs::write(&horcrux_path, contents)?;
     }
+    let mut nonce = [0u8; 24];
+    let encrypted = encrypt_small_file(&path, &secret.unwrap(), &nonce);
+    let mut writer: Vec<u8> = vec![];
 
-    // let mut reader = File::open(path)?;
-    // let mut reader = crypto_reader(&mut reader, &key)?;
+    let mut reader: &[u8] = &encrypted.unwrap();
 
-    // let writers: Vec<&mut dyn Write> = horcrux_files.iter_mut().map(|f| f).collect();
-    // let mut writer = std::io::BufWriter::new(std::io::sink());
-    // for w in writers {
-    //     writer.get_mut().extend(w);
-    // }
-    // std::io::copy(&mut reader, &mut writer)?;
+    for horcrux in horcrux_files {
+        let mut writer = BufWriter::new(horcrux);
+        std::io::copy(&mut reader.take(u64::MAX), &mut writer)?;
+    }
+
     Ok(())
 }
 
 fn generate_key() -> Option<Vec<u8>> {
     let mut key = vec![0; 32];
-    rand::thread_rng().try_fill_bytes(&mut key);
+    OsRng.try_fill_bytes(&mut key);
     Some(key)
 }
 
 //Refactor this into the struct and call it as a method
 fn formatted_header(index: u8, total: u8, json_header: String) -> String {
     let remaining = total - 1;
-    let file = format!("?? THIS FILE IS A HORCRUX. \n?? IT IS ONE OF {total} HORCRUXES THAT EACH CONTAIN PART OF AN ORIGINAL FILE. \n?? THIS IS HORCRUX NUMBER {index} of {total}. \n?? IN ORDER TO RESURRECT THIS ORIGINAL FILE YOU MUST FIND THE OTHER {remaining} HORCRUXES AND THEN BIND THEM USING THE PROGRAM FOUND AT THE FOLLOWING URL \n?? https://github.com \n \n-- HEADER -- \n{json_header} \n-- BODY --");
+    let file = format!("?? THIS FILE IS A HORCRUX. \n?? IT IS ONE OF {total} HORCRUXES THAT EACH CONTAIN PART OF AN ORIGINAL FILE. \n?? THIS IS HORCRUX NUMBER {index} of {total}. \n?? IN ORDER TO RESURRECT THIS ORIGINAL FILE YOU MUST FIND THE OTHER {remaining} HORCRUXES AND THEN BIND THEM USING THE PROGRAM FOUND AT THE FOLLOWING URL \n?? https://github.com \n \n-- HEADER -- \n{json_header} \n-- BODY -- \n");
     return file;
 }
