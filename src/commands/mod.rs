@@ -1,4 +1,4 @@
 mod horcrux;
 pub mod split;
-// mod bind;
+mod bind;
 mod utils;

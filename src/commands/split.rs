@@ -22,7 +22,7 @@ pub fn split(
     threshold: u8,
 ) -> Result<(), Box<dyn Error>> {
     let mut key = generate_key();
-    
+    let nonce = generate_nonce().unwrap();
     
     let sharks = Sharks(threshold);
     if !key.is_some() {
@@ -30,12 +30,11 @@ pub fn split(
         println!("UH OH COULD NOT GENERATE KEY")
     }
     let clone = key.clone();
-    let secret: Result<[u8; 32], _> = key.unwrap().as_slice().try_into();
+    // let secret: Result<[u8; 32], _> = key.unwrap().as_slice().try_into();
     // Obtain an iterator over the shares for secret [1, 2, 3, 4]
     let dealer = sharks.dealer(clone.unwrap().as_slice());
     // Get 10 shares
     let fragments: Vec<Share> = dealer.take(total as usize).collect();
-
     let timestamp = SystemTime::now();
 
     let destination_dir = Path::new(destination);
@@ -63,6 +62,7 @@ pub fn split(
             index: index,
             total: total,
             threshold: threshold,
+            nonce: nonce,
             key_fragment: fragment,
         };
 
@@ -92,11 +92,9 @@ pub fn split(
 
         fs::write(&horcrux_path, contents)?;
     }
-    let mut nonce = [0u8; 24];
-    let encrypted = encrypt_small_file(&path, &secret.unwrap(), &nonce);
-    let mut writer: Vec<u8> = vec![];
-
-    let mut reader: &[u8] = &encrypted.unwrap();
+    
+    let encrypted = encrypt_small_file(&path, &key.unwrap(), &nonce);
+    let reader: &[u8] = &encrypted.unwrap();
 
     for horcrux in horcrux_files {
         let mut writer = BufWriter::new(horcrux);
@@ -106,11 +104,19 @@ pub fn split(
     Ok(())
 }
 
-fn generate_key() -> Option<Vec<u8>> {
-    let mut key = vec![0; 32];
-    OsRng.try_fill_bytes(&mut key);
+fn generate_key() -> Option<[u8; 32]> {
+    let mut key: [u8; 32] = [0u8; 32];
+    OsRng.try_fill_bytes(&mut key).expect("Failed to generate key");
     Some(key)
 }
+
+
+fn generate_nonce() -> Option<[u8; 24]> {
+    let mut nonce: [u8; 24] = [0u8;24];
+    OsRng.try_fill_bytes(&mut nonce).expect("Failed to generate nonce");
+    Some(nonce)
+}
+
 
 //Refactor this into the struct and call it as a method
 fn formatted_header(index: u8, total: u8, json_header: String) -> String {
