@@ -38,9 +38,7 @@ fn qualify_horcruxes() {
 // And try recovery from there
 pub fn bind(directory: &PathBuf) -> Result<(), Box<dyn Error>> {
     let horcrux_paths = find_horcrux_file_paths(directory);
-    for path in &horcrux_paths {
-        dbg!(path);
-    }
+    
     let horcruxes: Vec<Horcrux> = horcrux_paths
         .iter()
         .flat_map(|entry| Horcrux::from_path(entry))
@@ -63,7 +61,6 @@ pub fn bind(directory: &PathBuf) -> Result<(), Box<dyn Error>> {
         }
     }
 
-    dbg!(matching_horcruxes.len());
     
     if !(matching_horcruxes.len() > 0 && matching_horcruxes.len() >= threshold.to_owned() as usize) {
         println!("Failed threshold: found {:?} horcruxes and {:?} are required to recover the file", matching_horcruxes.len(), threshold)
@@ -79,8 +76,9 @@ pub fn bind(directory: &PathBuf) -> Result<(), Box<dyn Error>> {
             .create(true)
             .write(true)
             .open("test.recovered.txt").unwrap();
-    let mut contents = first_horcrux.contents.try_clone().unwrap();
-    let decrypted = decrypt_small_file(&mut contents, &key, target_nonce.try_into().unwrap());
+    // let mut contents = first_horcrux.contents.try_clone().unwrap();
+    
+    let decrypted = decrypt_small_file(&first_horcrux.path, &key, target_nonce.try_into().unwrap());
     
     let fc = match decrypted {
         Ok(a) => a,

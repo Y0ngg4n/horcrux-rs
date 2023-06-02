@@ -30,8 +30,6 @@ pub fn split(
         println!("UH OH COULD NOT GENERATE KEY")
     }
 
-    println!("GEN KEY");
-    dbg!(key.unwrap());
     let dealer = sharks.dealer(key.unwrap().as_slice());
     let fragments: Vec<Share> = dealer.take(total as usize).collect();
     
@@ -66,7 +64,6 @@ pub fn split(
             key_fragment: fragment,
         };
 
-        //originalFilename := filepath.Base(path)
         let json_header = serde_json::to_string_pretty(&header)?;
 
         let original_filename_without_ext = Path::new(&original_filename)

@@ -39,47 +39,40 @@ impl Horcrux {
             .read(true)
             .open(path)
             .unwrap();
-        
 
 
 
+        let mut total_bytes_scanned = 0;
         let reader = BufReader::new(file.by_ref());
-        let mut marker: Option<&str> = None;
-        let mut body_position: usize = 0;
-        // let mut header_content: String = String::new();
-
+        // let mut marker: Option<&str> = None;
         let mut header_content = String::new();
         let mut header_found: bool = false;
         // Iterate over the lines of the file
-        for (position, line) in reader.lines().enumerate() {
+        for line in reader.lines() {
             let line = line.expect("Failed to read line");
             
+            total_bytes_scanned += line.len() + 1;
             if line == "-- HEADER --" {
                 header_found = true;
                 continue;
-            } else if header_found && line != "-- BODY --" {
+            }
+            if header_found && line != "-- BODY --" {
                 header_content.push_str(&line);
-            } else if line == "-- BODY --" {
-                body_position = position;
-                break;
+            }
+            if line == "-- BODY --" {
+                break; // Stop reading after reaching the body marker
             }
         }
 
-        println!("HERE");
-
-        dbg!(&header_content);
         let header_result: Result<HorcruxHeader, _> = serde_json::from_str(&header_content);
 
         let header = match header_result {
             Ok(h) => h,
             Err(error) => panic!("Error with parsing {:?}", error)
         };
-        dbg!(body_position);
+
             // let mut file_copy = file.by_ref().try_clone()?;
-        file.seek(SeekFrom::Current(body_position as i64)).expect("Failed to seek position");
-        
-        
-        // file.by_ref().seek(SeekFrom::Start((body_position as u64)));
+        file.seek(SeekFrom::Start(total_bytes_scanned as u64)).expect("Failed to seek position");
         
         let horcrux = Horcrux::new(
             path,
