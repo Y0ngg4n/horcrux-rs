@@ -76,9 +76,8 @@ pub fn bind(directory: &PathBuf) -> Result<(), Box<dyn Error>> {
             .create(true)
             .write(true)
             .open("test.recovered.txt").unwrap();
-    // let mut contents = first_horcrux.contents.try_clone().unwrap();
-    
-    let decrypted = decrypt_small_file(&first_horcrux.path, &key, target_nonce.try_into().unwrap());
+    let mut contents = first_horcrux.contents.try_clone().unwrap();
+    let decrypted = decrypt_small_file(&mut contents, &key, target_nonce.try_into().unwrap());
     
     let fc = match decrypted {
         Ok(a) => a,

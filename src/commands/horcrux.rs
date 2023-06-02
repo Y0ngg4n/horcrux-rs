@@ -37,6 +37,7 @@ impl Horcrux {
     pub fn from_path(path: &PathBuf) -> Result<Horcrux, std::io::Error> {
         let mut file = OpenOptions::new()
             .read(true)
+            .append(true)
             .open(path)
             .unwrap();
 
@@ -59,9 +60,11 @@ impl Horcrux {
             if header_found && line != "-- BODY --" {
                 header_content.push_str(&line);
             }
+            
             if line == "-- BODY --" {
                 break; // Stop reading after reaching the body marker
             }
+            
         }
 
         let header_result: Result<HorcruxHeader, _> = serde_json::from_str(&header_content);
@@ -74,6 +77,8 @@ impl Horcrux {
             // let mut file_copy = file.by_ref().try_clone()?;
         file.seek(SeekFrom::Start(total_bytes_scanned as u64)).expect("Failed to seek position");
         
+        
+        // file.by_ref().seek(SeekFrom::Start((body_position as u64)));
         let horcrux = Horcrux::new(
             path,
             header,
