@@ -29,12 +29,12 @@ pub fn split(
         //Return err
         println!("UH OH COULD NOT GENERATE KEY")
     }
-    let clone = key.clone();
-    // let secret: Result<[u8; 32], _> = key.unwrap().as_slice().try_into();
-    // Obtain an iterator over the shares for secret [1, 2, 3, 4]
-    let dealer = sharks.dealer(clone.unwrap().as_slice());
-    // Get 10 shares
+
+    println!("GEN KEY");
+    dbg!(key.unwrap());
+    let dealer = sharks.dealer(key.unwrap().as_slice());
     let fragments: Vec<Share> = dealer.take(total as usize).collect();
+    
     let timestamp = SystemTime::now();
 
     let destination_dir = Path::new(destination);
@@ -62,7 +62,7 @@ pub fn split(
             index: index,
             total: total,
             threshold: threshold,
-            nonce: nonce,
+            nonce: nonce.to_vec(),
             key_fragment: fragment,
         };
 
@@ -121,6 +121,6 @@ fn generate_nonce() -> Option<[u8; 24]> {
 //Refactor this into the struct and call it as a method
 fn formatted_header(index: u8, total: u8, json_header: String) -> String {
     let remaining = total - 1;
-    let file = format!("?? THIS FILE IS A HORCRUX. \n?? IT IS ONE OF {total} HORCRUXES THAT EACH CONTAIN PART OF AN ORIGINAL FILE. \n?? THIS IS HORCRUX NUMBER {index} of {total}. \n?? IN ORDER TO RESURRECT THIS ORIGINAL FILE YOU MUST FIND THE OTHER {remaining} HORCRUXES AND THEN BIND THEM USING THE PROGRAM FOUND AT THE FOLLOWING URL \n?? https://github.com \n \n-- HEADER -- \n{json_header} \n-- BODY -- \n");
+    let file = format!("?? THIS FILE IS A HORCRUX. \n?? IT IS ONE OF {total} HORCRUXES THAT EACH CONTAIN PART OF AN ORIGINAL FILE. \n?? THIS IS HORCRUX NUMBER {index} of {total}. \n?? IN ORDER TO RESURRECT THIS ORIGINAL FILE YOU MUST FIND THE OTHER {remaining} HORCRUXES AND THEN BIND THEM USING THE PROGRAM FOUND AT THE FOLLOWING URL \n?? https://github.com \n \n-- HEADER --\n{json_header} \n-- BODY --\n");
     return file;
 }

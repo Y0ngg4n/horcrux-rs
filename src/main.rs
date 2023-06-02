@@ -3,7 +3,7 @@ use std::{io::{self, BufRead}, fs::File, path::PathBuf};
 use clap::{Arg, ArgAction, Command, builder::FalseyValueParser, value_parser};
 
 use crate::commands::split::split;
-
+use crate::commands::bind::bind;
 pub mod commands;
 
 fn main() {
@@ -44,12 +44,12 @@ fn main() {
                         .action(ArgAction::Set)
                 )
                 .arg(
-                    Arg::new("outdir")
+                    Arg::new("destination")
                         .required(false)
-                        .short('o')
-                        .long("outdir")
+                        .short('d')
+                        .long("destination")
                         .default_value(".")
-                        .help("Directory to save the horcruxes to, a new directory will be created if specified does not exist")
+                        .help("Directory to save the horcruxes to, a new directory will be created if specified does not exist.")
                         .action(ArgAction::Set)
                         .num_args(1..),
                 ),
@@ -59,14 +59,24 @@ fn main() {
                 .long_flag("bind")
                 .about("Recovers the secret from the")
                 .arg(
-                    Arg::new("directory")
+                    Arg::new("source")
                         .required(false)
-                        .help("location of directory that contains the horcruxes")
-                        .short('d')
-                        .long("directory")
+                        .help("Source location that contains the horcruxes")
+                        .short('s')
+                        .long("source")
                         .num_args(1..)
                         .action(ArgAction::Append)
                 )
+                .arg(
+                    Arg::new("destination")
+                        .required(false)
+                        .short('d')
+                        .long("destination")
+                        .default_value(".")
+                        .help("Directory to place the recovered file.")
+                        .action(ArgAction::Set)
+                        .num_args(1..)
+                ),
         )
         .get_matches();
 
@@ -75,7 +85,7 @@ fn main() {
             let mut file = sub_matches.get_one::<String>("file").map(|s| s.as_str());
             let shards: Option<&u8> = sub_matches.get_one("shards");
             let threshold: Option<&u8> = sub_matches.get_one("threshold");
-            let outdir = sub_matches.get_one::<String>("outdir").map(|s| s.as_str());
+            let destination = sub_matches.get_one::<String>("destination").map(|s| s.as_str());
 
             //If file arg not found then check std in.
             if file.is_some() {
@@ -83,7 +93,7 @@ fn main() {
                 let x = shards.unwrap().to_owned();
                 if path.is_file() {
                     println!("Found file!");
-                    let result = split(&path.to_str().unwrap(), outdir.unwrap(), x, threshold.unwrap().to_owned());
+                    let result = split(&path.to_str().unwrap(), destination.unwrap(), x, threshold.unwrap().to_owned());
                     println!("DONE!!!!")
                 } else {
                     println!("Not a file!")
@@ -97,10 +107,13 @@ fn main() {
             }
         }
         Some(("bind", sub_matches)) => {
-            let mut directory = sub_matches.get_one::<String>("directory").map(|s| s.as_str());
-            //TODO if piped then check this
-            if directory.is_some() {
-
+            let mut source = sub_matches.get_one::<String>("source").map(|s| s.as_str());
+            let mut destination = sub_matches.get_one::<String>("destination").map(|s| s.as_str());
+            
+            if source.is_some() {
+                let path = PathBuf::from(source.unwrap());
+                let result = bind(&path);
+                println!("DONE BINDING")
             } else {
                 let input = io::stdin()
                     .lock()

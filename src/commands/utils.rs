@@ -37,20 +37,20 @@
 // }
 
 use chacha20poly1305::{
-    aead::{stream, Aead, NewAead},
+    aead::{stream, Aead, NewAead, Error},
     XChaCha20Poly1305,
 };
 use rand::{rngs::OsRng, RngCore};
 use std::{
     fs::{self, File},
-    io::{Read, Write},
+    io::{Read, Write, BufReader},
 };
 
 pub fn encrypt_small_file(
     filepath: &str,
     key: &[u8; 32],
     nonce: &[u8; 24],
-) -> Result<(Vec<u8>), std::io::Error> {
+) -> Result<Vec<u8>, std::io::Error> {
     let cipher = XChaCha20Poly1305::new(key.into());
 
     let file_data = fs::read(filepath)?;
@@ -63,3 +63,22 @@ pub fn encrypt_small_file(
     Ok(encrypted_file)
 }
 
+
+pub fn decrypt_small_file(
+    encrypted_file: &mut File,
+    key: &[u8; 32],
+    nonce: &[u8; 24],
+) -> Result<Vec<u8>, std::io::Error> {
+    let cipher = XChaCha20Poly1305::new(key.into());
+
+    let mut file_data: Vec<u8> = Vec::new();
+    let mut file_reader = BufReader::new(encrypted_file);
+    file_reader.read_to_end(&mut file_data).unwrap();
+
+    dbg!(&file_data);
+    let decrypted_file = cipher
+        .decrypt(nonce.into(), file_data.as_ref())
+        .map_err(|err:Error| println!("Decrypting small file: {:?}", err)).unwrap();
+
+    Ok(decrypted_file)
+}
