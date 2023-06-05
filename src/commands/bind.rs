@@ -45,18 +45,20 @@ pub fn bind(directory: &PathBuf) -> Result<(), Box<dyn Error>> {
         .collect();
     println!("LEN OF {:?}", horcruxes.len());
 
-    let mut shares: Vec<Share> = Vec::new();
+    let mut key_shares: Vec<Share> = Vec::new();
+    let mut nonce_shares : Vec<Share> = Vec::new();
     let mut matching_horcruxes: Vec<&Horcrux> =  Vec::new();
 
     let first_horcrux = &horcruxes[0];
-    let target_nonce: &[u8] = &horcruxes[0].header.nonce.as_slice();
     let target_file_name = &horcruxes[0].header.canonical_file_name;
     let threshold: &u8 = &horcruxes[0].header.threshold;
     
     for horcrux in &horcruxes  {
-        if horcrux.header.nonce == target_nonce.to_owned() && horcrux.header.canonical_file_name == target_file_name.to_owned() {
-            let share: Share = Share::try_from(horcrux.header.key_fragment.as_slice()).unwrap();
-            shares.push(share);
+        if horcrux.header.canonical_file_name == target_file_name.to_owned() {
+            let kshare: Share = Share::try_from(horcrux.header.key_fragment.as_slice()).unwrap();
+            let nshare: Share = Share::try_from(horcrux.header.nonce_fragment.as_slice()).unwrap();
+            key_shares.push(kshare);
+            nonce_shares.push(nshare);
             matching_horcruxes.push(&horcrux);
         }
     }
@@ -66,10 +68,11 @@ pub fn bind(directory: &PathBuf) -> Result<(), Box<dyn Error>> {
         println!("Failed threshold: found {:?} horcruxes and {:?} are required to recover the file", matching_horcruxes.len(), threshold)
     }
     //Recover the secret
-    let sharks = Sharks(threshold.clone());
-    
-    let key: [u8; 32] = sharks.recover(&shares).unwrap().try_into().expect("Cannot recover secret");
-    
+    let key_shark = Sharks(threshold.clone());
+    let nonce_shark = Sharks(threshold.clone());
+
+    let key: [u8; 32] = key_shark.recover(&key_shares).unwrap().try_into().expect("Cannot recover key");
+    let nonce: [u8; 24] = nonce_shark.recover(&nonce_shares).unwrap().try_into().expect("Cannot recover nonce");
     println!("RECOV KEY");
     
     let recovered_file: File = OpenOptions::new()
@@ -77,7 +80,7 @@ pub fn bind(directory: &PathBuf) -> Result<(), Box<dyn Error>> {
             .write(true)
             .open("test.recovered.txt").unwrap();
     let mut contents = first_horcrux.contents.try_clone().unwrap();
-    let decrypted = decrypt_small_file(&mut contents, &key, target_nonce.try_into().unwrap());
+    let decrypted = decrypt_small_file(&mut contents, &key, &nonce);
     
     let fc = match decrypted {
         Ok(a) => a,

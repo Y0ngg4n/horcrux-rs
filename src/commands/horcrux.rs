@@ -11,7 +11,7 @@ pub struct HorcruxHeader {
     pub total: u8,
     pub threshold: u8,
     #[serde(with = "serde_bytes")]
-    pub nonce: Vec<u8>,
+    pub nonce_fragment: Vec<u8>,
     #[serde(with = "serde_bytes")]
     pub key_fragment: Vec<u8>
 }
@@ -78,7 +78,6 @@ impl Horcrux {
         file.seek(SeekFrom::Start(total_bytes_scanned as u64)).expect("Failed to seek position");
         
         
-        // file.by_ref().seek(SeekFrom::Start((body_position as u64)));
         let horcrux = Horcrux::new(
             path,
             header,

@@ -21,18 +21,20 @@ pub fn split(
     total: u8,
     threshold: u8,
 ) -> Result<(), Box<dyn Error>> {
-    let mut key = generate_key();
-    let nonce = generate_nonce().unwrap();
+    let mut key: [u8; 32] = generate_key().unwrap();
+    let nonce: [u8; 24] = generate_nonce().unwrap();
     
-    let sharks = Sharks(threshold);
-    if !key.is_some() {
-        //Return err
-        println!("UH OH COULD NOT GENERATE KEY")
-    }
+    let key_shark = Sharks(threshold);
+    let nonce_shark = Sharks(threshold);
+    
+    //Break up key, nonce into same number of fragments
+    let key_dealer = key_shark.dealer(key.as_slice());
+    let key_fragments: Vec<Share> = key_dealer.take(total as usize).collect();
+    
+    let nonce_dealer = nonce_shark.dealer(nonce.as_slice());
+    let nonce_fragments: Vec<Share> = nonce_dealer.take(total as usize).collect();
 
-    let dealer = sharks.dealer(key.unwrap().as_slice());
-    let fragments: Vec<Share> = dealer.take(total as usize).collect();
-    
+
     let timestamp = SystemTime::now();
 
     let destination_dir = Path::new(destination);
@@ -53,15 +55,16 @@ pub fn split(
 
     for i in 0..total {
         let index = i + 1;
-        let fragment = Vec::from(&fragments[i as usize]);
+        let key_fragment = Vec::from(&key_fragments[i as usize]);
+        let nonce_fragment = Vec::from(&nonce_fragments[i as usize]);
         let header = HorcruxHeader {
             canonical_file_name: original_filename.to_owned(),
             timestamp: timestamp,
             index: index,
             total: total,
             threshold: threshold,
-            nonce: nonce.to_vec(),
-            key_fragment: fragment,
+            nonce_fragment: nonce_fragment,
+            key_fragment: key_fragment,
         };
 
         let json_header = serde_json::to_string_pretty(&header)?;
@@ -90,7 +93,7 @@ pub fn split(
         fs::write(&horcrux_path, contents)?;
     }
     
-    let encrypted = encrypt_small_file(&path, &key.unwrap(), &nonce);
+    let encrypted = encrypt_small_file(&path, &key, &nonce);
     let reader: &[u8] = &encrypted.unwrap();
 
     for horcrux in horcrux_files {
