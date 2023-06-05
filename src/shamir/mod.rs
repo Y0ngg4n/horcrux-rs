@@ -1,2 +1,0 @@
-mod shamir;
-mod tables;
