@@ -1,7 +1,11 @@
-use std::{time::SystemTime, path::{PathBuf, Path}, fs::{File, OpenOptions}, io::{Error, BufReader, Read}, borrow::Borrow};
-use std::io::{self, BufRead, Seek, SeekFrom};
 use serde::{Deserialize, Serialize};
-
+use std::io::{BufRead, Seek, SeekFrom};
+use std::{
+    fs::{File, OpenOptions},
+    io::{BufReader, Read},
+    path::{Path, PathBuf},
+    time::SystemTime,
+};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct HorcruxHeader {
@@ -13,46 +17,39 @@ pub struct HorcruxHeader {
     #[serde(with = "serde_bytes")]
     pub nonce_fragment: Vec<u8>,
     #[serde(with = "serde_bytes")]
-    pub key_fragment: Vec<u8>
+    pub key_fragment: Vec<u8>,
 }
 
 pub struct Horcrux {
-    pub header: HorcruxHeader,
     pub path: PathBuf,
+    pub header: HorcruxHeader,
     pub contents: File,
 }
 
-
 impl Horcrux {
-    pub fn new(path: &PathBuf, header: HorcruxHeader, contents: File) -> Horcrux {
+    pub fn new(path: PathBuf, header: HorcruxHeader, contents: File) -> Self {
         Self {
-            path: path.to_owned(),
+            path: path,
             header: header,
             contents: contents,
         }
     }
 
-
-    //Given a file this will use BufReader to extract out the header 
-    pub fn from_path(path: &PathBuf) -> Result<Horcrux, std::io::Error> {
-        let mut file = OpenOptions::new()
-            .read(true)
-            .append(true)
-            .open(path)
-            .unwrap();
-
-
+    //This naively assumes you have already passed in a file ending in .horcrux
+    // Open the file, read over each line and extracting json content after reaching the -- HEADER -- marker. Stop scanning after reaching the -- BODY -- marker.
+    // Set the file read pointer (seek) to be after the body marker
+    pub fn from_path(path: &Path) -> Result<Self, std::io::Error> {
+        let mut file: File = OpenOptions::new().read(true).append(true).open(path)?;
 
         let mut total_bytes_scanned = 0;
         let reader = BufReader::new(file.by_ref());
-        // let mut marker: Option<&str> = None;
         let mut header_content = String::new();
         let mut header_found: bool = false;
-        // Iterate over the lines of the file
+
         for line in reader.lines() {
-            let line = line.expect("Failed to read line");
-            
+            let line = line.expect("Failed to read line(s) in horcrux file.");
             total_bytes_scanned += line.len() + 1;
+
             if line == "-- HEADER --" {
                 header_found = true;
                 continue;
@@ -60,33 +57,21 @@ impl Horcrux {
             if header_found && line != "-- BODY --" {
                 header_content.push_str(&line);
             }
-            
+
             if line == "-- BODY --" {
-                break; // Stop reading after reaching the body marker
+                break; // Stop reading after reaching the body marker seek from here
             }
-            
         }
+        file.seek(SeekFrom::Start(total_bytes_scanned as u64))
+            .expect("Failed seek horcrux file.");
 
-        let header_result: Result<HorcruxHeader, _> = serde_json::from_str(&header_content);
+        let header: HorcruxHeader =
+            serde_json::from_str(&header_content).expect("Failed to parse horcrux file header.");
 
-        let header = match header_result {
-            Ok(h) => h,
-            Err(error) => panic!("Error with parsing {:?}", error)
-        };
-
-            // let mut file_copy = file.by_ref().try_clone()?;
-        file.seek(SeekFrom::Start(total_bytes_scanned as u64)).expect("Failed to seek position");
-        
-        
-        let horcrux = Horcrux::new(
-            path,
-            header,
-            file
-        );
-        Ok(horcrux)
+        Ok(Self {
+            path: path.to_path_buf(),
+            header: header,
+            contents: file,
+        })
     }
 }
-
-
-
-

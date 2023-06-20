@@ -1,12 +1,129 @@
-use std::{io::{self, BufRead}, fs::File, path::PathBuf};
+use std::{io::{self, BufRead}, path::PathBuf, ops::RangeInclusive, fs::File};
 
-use clap::{Arg, ArgAction, Command, builder::FalseyValueParser, value_parser};
+use clap::{Arg, ArgAction, Command, value_parser, builder::OsStr, Parser, Subcommand};
 
 use crate::commands::split::split;
 use crate::commands::bind::bind;
 pub mod commands;
 
+
+
+
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    /// Optional name to operate on
+    name: Option<String>,
+
+    /// Sets a custom config file
+    #[arg(short, long, value_name = "FILE")]
+    config: Option<PathBuf>,
+
+    //Disable output
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    silent: u8,
+
+    #[command(subcommand)]
+    command: Option<Commands>,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// does testing things
+    Split {
+        /// lists test values
+        #[arg(short, long, required = false)]
+        file: Option<PathBuf>,
+        #[arg(short, long, required = false)]
+        shards: u8,
+        threshold: u8,
+        destination: PathBuf
+    },
+    Bind {
+        source: PathBuf,
+        destination: PathBuf
+    }
+}
+
+
+
+fn non_main() {
+    let cli = Cli::parse();
+
+    // You can check for the existence of subcommands, and if found use their
+    // matches just as you would the top level cmd
+    match &cli.command {
+        Some(Commands::Split { file, shards, threshold, destination }) => {
+            if(file.is_some()) {
+                
+            } else {
+
+            }
+        }
+        Some(Commands::Bind { source, destination }) => {
+
+        }
+        _ => unreachable!()
+    }
+}
+
+
+static PACKAGES: &[&str] = &[
+    "fs-events",
+    "my-awesome-module",
+    "emoji-speaker",
+    "wrap-ansi",
+    "stream-browserify",
+    "acorn-dynamic-import",
+];
+
+static COMMANDS: &[&str] = &[
+    "cmake .",
+    "make",
+    "make clean",
+    "gcc foo.c -o foo",
+    "gcc bar.c -o bar",
+    "./helper.sh rebuild-cache",
+    "make all-clean",
+    "make test",
+];
+
+static LOOKING_GLASS: Emoji<'_, '_> = Emoji("🔍  ", "");
+static TRUCK: Emoji<'_, '_> = Emoji("🚚  ", "");
+static CLIP: Emoji<'_, '_> = Emoji("🔗  ", "");
+static PAPER: Emoji<'_, '_> = Emoji("📃  ", "");
+static SPARKLE: Emoji<'_, '_> = Emoji("✨ ", ":-)");
+
 fn main() {
+    let mut rng = rand::thread_rng();
+    let started = Instant::now();
+    let spinner_style = ProgressStyle::with_template("{prefix:.bold.dim} {spinner} {wide_msg}")
+        .unwrap()
+        .tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ ");
+
+    println!(
+        "{} {}Resolving packages...",
+        style("[1/4]").bold().dim(),
+        LOOKING_GLASS
+    );
+    println!(
+        "{} {}Fetching packages...",
+        style("[2/4]").bold().dim(),
+        TRUCK
+    );
+
+    println!(
+        "{} {}Linking dependencies...",
+        style("[3/4]").bold().dim(),
+        CLIP
+    );
+    let deps = 1232;
+    let pb = ProgressBar::new(deps);
+    for _ in 0..deps {
+        thread::sleep(Duration::from_millis(3));
+        pb.inc(1);
+    }
+    pb.finish_and_clear();
     let matches = Command::new("hx")
         .version("0.1") //Todo make this env variable
         .about("Utility to split a file into n number of encrypted secrets - no password needed.")
@@ -23,7 +140,7 @@ fn main() {
                         .required(false)
                         .short('f')
                         .long("file")
-                        .action(ArgAction::Append)
+                        .action(ArgAction::Set)
                 )
                 .arg(
                     Arg::new("shards")
@@ -61,11 +178,10 @@ fn main() {
                 .arg(
                     Arg::new("source")
                         .required(false)
-                        .help("Source location that contains the horcruxes")
+                        .help("Source directory that contains the horcruxes")
                         .short('s')
                         .long("source")
-                        .num_args(1..)
-                        .action(ArgAction::Append)
+                        .action(ArgAction::Set)
                 )
                 .arg(
                     Arg::new("destination")
@@ -75,14 +191,13 @@ fn main() {
                         .default_value(".")
                         .help("Directory to place the recovered file.")
                         .action(ArgAction::Set)
-                        .num_args(1..)
                 ),
         )
         .get_matches();
 
     match matches.subcommand() {
         Some(("split", sub_matches)) => {
-            let mut file = sub_matches.get_one::<String>("file").map(|s| s.as_str());
+            let file = sub_matches.get_one::<String>("file").map(|s| s.as_str());
             let shards: Option<&u8> = sub_matches.get_one("shards");
             let threshold: Option<&u8> = sub_matches.get_one("threshold");
             let destination = sub_matches.get_one::<String>("destination").map(|s| s.as_str());
@@ -93,7 +208,7 @@ fn main() {
                 let x = shards.unwrap().to_owned();
                 if path.is_file() {
                     println!("Found file!");
-                    let result = split(&path.to_str().unwrap(), destination.unwrap(), x, threshold.unwrap().to_owned());
+                    let result = split(&path, destination.unwrap(), x, threshold.unwrap().to_owned());
                     println!("DONE!!!!")
                 } else {
                     println!("Not a file!")
@@ -103,7 +218,9 @@ fn main() {
                 .lock()
                 .lines()
                 .fold("".to_string(), |acc, line| acc + &line.unwrap() + "\n");
-            println!("SPLITTING YOUR FILE! std {}", input_file)
+                let term_file = PathBuf::from(input_file);
+                let result = split(&term_file, destination.unwrap(), shards.unwrap().to_owned(), threshold.unwrap().to_owned());
+                println!("DONE!!!!")
             }
         }
         Some(("bind", sub_matches)) => {

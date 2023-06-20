@@ -1,11 +1,12 @@
 use std::{
     error::Error,
     fs::{self, File, OpenOptions},
-    io::{Write, BufWriter, Read, BufReader},
-    path::Path,
-    time::{SystemTime}, sync::{Arc, Mutex}, borrow::BorrowMut, cell::RefCell
+    io::{BufWriter, Read},
+    path::{Path, PathBuf},
+    time::{SystemTime}, borrow::Borrow
 };
 
+use clap::builder::OsStr;
 //TODO here stdin: Strategy for handling pipeline is check if
 //Input string is greater than 255 characters if it is then we can safely assume
 // what was passed is a the string contents of a file. If it's less than we check if it's a directory and then
@@ -16,22 +17,24 @@ use sharks::{Share, Sharks};
 use super::{horcrux::HorcruxHeader, utils::encrypt_small_file};
 
 pub fn split(
-    path: &str,
+    path: &PathBuf,
     destination: &str,
     total: u8,
     threshold: u8,
 ) -> Result<(), Box<dyn Error>> {
-    let mut key: [u8; 32] = generate_key().unwrap();
-    let nonce: [u8; 24] = generate_nonce().unwrap();
+    let mut key = [0u8; 32];
+    let mut nonce = [0u8; 24]; //19
+
+    OsRng.fill_bytes(&mut key);
+    OsRng.fill_bytes(&mut nonce);
     
-    let key_shark = Sharks(threshold);
-    let nonce_shark = Sharks(threshold);
+    let crypto_shark = Sharks(threshold);
     
     //Break up key, nonce into same number of fragments
-    let key_dealer = key_shark.dealer(key.as_slice());
+    let key_dealer = crypto_shark.dealer(key.as_slice());
     let key_fragments: Vec<Share> = key_dealer.take(total as usize).collect();
     
-    let nonce_dealer = nonce_shark.dealer(nonce.as_slice());
+    let nonce_dealer = crypto_shark.dealer(nonce.as_slice());
     let nonce_fragments: Vec<Share> = nonce_dealer.take(total as usize).collect();
 
 
@@ -39,18 +42,18 @@ pub fn split(
 
     let destination_dir = Path::new(destination);
     if !destination_dir.exists() {
-        fs::create_dir_all(destination_dir);
+        fs::create_dir_all(destination_dir).expect("Error cannot create new directory for horcruxes.");
     } else if !destination_dir.is_dir() {
         //Return error
     }
     
     let original_filename = Path::new(path)
         .file_name()
-        .unwrap()
+        .unwrap_or(OsStr::from("horcrux.txt").borrow())
         .to_string_lossy()
         .to_string();
-
-    //Todo hashmap this fucker
+        
+    
     let mut horcrux_files: Vec<File> = Vec::with_capacity(total as usize);
 
     for i in 0..total {
@@ -79,21 +82,20 @@ pub fn split(
             original_filename_without_ext, index, total
         );
         let horcrux_path = Path::new(destination).join(&horcrux_filename);
-        println!("creating {:?}", horcrux_path);
 
         let horcrux_file: File = OpenOptions::new()
             .create(true)
             .write(true)
             .append(true)
             .open(&horcrux_path)?;
+        
         horcrux_files.push(horcrux_file);
-
         let contents = formatted_header(index, total, json_header);
 
         fs::write(&horcrux_path, contents)?;
     }
     
-    let encrypted = encrypt_small_file(&path, &key, &nonce);
+    let encrypted = encrypt_small_file(&path.to_str().unwrap(), &key, &nonce);
     let reader: &[u8] = &encrypted.unwrap();
 
     for horcrux in horcrux_files {
@@ -103,20 +105,6 @@ pub fn split(
 
     Ok(())
 }
-
-fn generate_key() -> Option<[u8; 32]> {
-    let mut key: [u8; 32] = [0u8; 32];
-    OsRng.try_fill_bytes(&mut key).expect("Failed to generate key");
-    Some(key)
-}
-
-
-fn generate_nonce() -> Option<[u8; 24]> {
-    let mut nonce: [u8; 24] = [0u8;24];
-    OsRng.try_fill_bytes(&mut nonce).expect("Failed to generate nonce");
-    Some(nonce)
-}
-
 
 //Refactor this into the struct and call it as a method
 fn formatted_header(index: u8, total: u8, json_header: String) -> String {
