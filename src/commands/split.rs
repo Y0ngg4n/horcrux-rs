@@ -1,20 +1,20 @@
 use std::{
     error::Error,
     fs::{self, File, OpenOptions},
-    io::{BufWriter, Read},
+    io::{BufWriter, Read, self},
     path::{Path, PathBuf},
-    time::{SystemTime}, borrow::Borrow
+    time::{SystemTime}, borrow::BorrowMut
+};
+use chacha20poly1305::{
+    aead::{Aead, AeadCore, KeyInit, OsRng},
+    XChaCha20Poly1305, XNonce, Key
 };
 
+
 use clap::builder::OsStr;
-//TODO here stdin: Strategy for handling pipeline is check if
-//Input string is greater than 255 characters if it is then we can safely assume
-// what was passed is a the string contents of a file. If it's less than we check if it's a directory and then
-// we create
-use rand::{RngCore, rngs::OsRng};
 use sharks::{Share, Sharks};
 
-use super::{horcrux::HorcruxHeader, utils::encrypt_small_file};
+use super::{horcrux::HorcruxHeader, utils::encrypt_file};
 
 pub fn split(
     path: &PathBuf,
@@ -22,12 +22,9 @@ pub fn split(
     total: u8,
     threshold: u8,
 ) -> Result<(), Box<dyn Error>> {
-    let mut key = [0u8; 32];
-    let mut nonce = [0u8; 24]; //19
-
-    OsRng.fill_bytes(&mut key);
-    OsRng.fill_bytes(&mut nonce);
-    
+    // let mut key = [0u8; 32];
+    let key: Key = XChaCha20Poly1305::generate_key(&mut OsRng);
+    let nonce: XNonce = XChaCha20Poly1305::generate_nonce(&mut OsRng);
     let crypto_shark = Sharks(threshold);
     
     //Break up key, nonce into same number of fragments
@@ -42,17 +39,15 @@ pub fn split(
 
     let destination_dir = Path::new(destination);
     if !destination_dir.exists() {
-        fs::create_dir_all(destination_dir).expect("Error cannot create new directory for horcruxes.");
+        let err = format!("Error cannot place horcruxes in directory {}. Try creating them in a different directory.", destination);
+        fs::create_dir_all(destination_dir).expect(&err);
     } else if !destination_dir.is_dir() {
         //Return error
     }
     
-    let original_filename = Path::new(path)
-        .file_name()
-        .unwrap_or(OsStr::from("horcrux.txt").borrow())
-        .to_string_lossy()
-        .to_string();
-        
+    let default_file_name = OsStr::from("horcrux.txt");
+
+    let canonical_filename = &path.file_name().unwrap_or(&default_file_name).to_string_lossy();
     
     let mut horcrux_files: Vec<File> = Vec::with_capacity(total as usize);
 
@@ -61,7 +56,7 @@ pub fn split(
         let key_fragment = Vec::from(&key_fragments[i as usize]);
         let nonce_fragment = Vec::from(&nonce_fragments[i as usize]);
         let header = HorcruxHeader {
-            canonical_file_name: original_filename.to_owned(),
+            canonical_file_name: canonical_filename.to_string(),
             timestamp: timestamp,
             index: index,
             total: total,
@@ -72,15 +67,13 @@ pub fn split(
 
         let json_header = serde_json::to_string_pretty(&header)?;
 
-        let original_filename_without_ext = Path::new(&original_filename)
-            .file_stem()
-            .unwrap()
-            .to_string_lossy();
+        let file_stem = path.file_stem().unwrap().to_string_lossy();
 
         let horcrux_filename = format!(
             "{}_{}_of_{}.horcrux",
-            original_filename_without_ext, index, total
+            file_stem, index, total
         );
+
         let horcrux_path = Path::new(destination).join(&horcrux_filename);
 
         let horcrux_file: File = OpenOptions::new()
@@ -91,18 +84,21 @@ pub fn split(
         
         horcrux_files.push(horcrux_file);
         let contents = formatted_header(index, total, json_header);
-
         fs::write(&horcrux_path, contents)?;
     }
-    
-    let encrypted = encrypt_small_file(&path.to_str().unwrap(), &key, &nonce);
-    let reader: &[u8] = &encrypted.unwrap();
 
-    for horcrux in horcrux_files {
+
+    //Strategy here is to pass the first horcrux file
+    let mut contents = File::open(path)?;
+    let mut initial_horcrux = horcrux_files[0];
+
+    encrypt_file(&mut contents, &mut initial_horcrux, &key, &nonce).expect("Error encrypting your file.");
+    for horcrux in horcrux_files.iter().skip(1) {
         let mut writer = BufWriter::new(horcrux);
-        std::io::copy(&mut reader.take(u64::MAX), &mut writer)?;
+        io::copy(&mut initial_horcrux.take(u64::MAX), &mut writer)?;
     }
 
+    
     Ok(())
 }
 

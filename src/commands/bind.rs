@@ -1,10 +1,12 @@
 use std::{path::{PathBuf}, fs::{self, OpenOptions, File}, io::{self, BufWriter}, error::Error};
 
+use chacha20poly1305::XNonce;
+use rand::{rngs::OsRng, RngCore};
 use sharks::{Share, Sharks};
 
 use crate::commands::horcrux::HorcruxHeader;
 
-use super::{horcrux::Horcrux, utils::decrypt_small_file};
+use super::{horcrux::Horcrux, utils::decrypt_file};
 
 
 
@@ -47,6 +49,8 @@ pub fn bind(directory: &PathBuf) -> Result<(), Box<dyn Error>> {
         .collect();
     println!("LEN OF {:?}", horcruxes.len());
 
+    
+
     let mut key_shares: Vec<Share> = Vec::new();
     let mut nonce_shares : Vec<Share> = Vec::new();
     let mut matching_horcruxes: Vec<&Horcrux> =  Vec::new();
@@ -75,15 +79,16 @@ pub fn bind(directory: &PathBuf) -> Result<(), Box<dyn Error>> {
     let crypto_shark = Sharks(threshold);
 
     let key: [u8; 32] = crypto_shark.recover(&key_shares).unwrap().try_into().expect("Cannot recover key");
-    let nonce: [u8; 24] = crypto_shark.recover(&nonce_shares).unwrap().try_into().expect("Cannot recover nonce");
-    println!("RECOV KEY");
+    let nonce: XNonce = crypto_shark.recover(&nonce_shares).unwrap().try_into().expect("Cannot recover nonce");
     
     let recovered_file: File = OpenOptions::new()
             .create(true)
             .write(true)
-            .open("test.recovered.txt").unwrap();
+            .open(initial_horcrux.header.canonical_file_name).unwrap();
     let mut contents = initial_horcrux.contents.try_clone().unwrap();
-    let decrypted = decrypt_small_file(&mut contents, &key, &nonce).expect("Cannot decrypt file contents");
+
+
+    let decrypted = decrypt_file(&mut contents, &key, &tnonce).expect("Cannot decrypt file contents");
     
     let mut reader: &[u8] = decrypted.as_slice();
     let mut writer = BufWriter::new(recovered_file);

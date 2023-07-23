@@ -1,6 +1,7 @@
-use std::{io::{self, BufRead}, path::PathBuf, ops::RangeInclusive, fs::File};
+use std::{io::{self, BufRead}, path::PathBuf, ops::RangeInclusive, fs::File, thread, time::Duration, cmp::min, fmt::Write};
 
 use clap::{Arg, ArgAction, Command, value_parser, builder::OsStr, Parser, Subcommand};
+use indicatif::{ProgressBar, ProgressStyle, ProgressState};
 
 use crate::commands::split::split;
 use crate::commands::bind::bind;
@@ -68,62 +69,24 @@ fn non_main() {
 }
 
 
-static PACKAGES: &[&str] = &[
-    "fs-events",
-    "my-awesome-module",
-    "emoji-speaker",
-    "wrap-ansi",
-    "stream-browserify",
-    "acorn-dynamic-import",
-];
-
-static COMMANDS: &[&str] = &[
-    "cmake .",
-    "make",
-    "make clean",
-    "gcc foo.c -o foo",
-    "gcc bar.c -o bar",
-    "./helper.sh rebuild-cache",
-    "make all-clean",
-    "make test",
-];
-
-static LOOKING_GLASS: Emoji<'_, '_> = Emoji("🔍  ", "");
-static TRUCK: Emoji<'_, '_> = Emoji("🚚  ", "");
-static CLIP: Emoji<'_, '_> = Emoji("🔗  ", "");
-static PAPER: Emoji<'_, '_> = Emoji("📃  ", "");
-static SPARKLE: Emoji<'_, '_> = Emoji("✨ ", ":-)");
-
 fn main() {
-    let mut rng = rand::thread_rng();
-    let started = Instant::now();
-    let spinner_style = ProgressStyle::with_template("{prefix:.bold.dim} {spinner} {wide_msg}")
-        .unwrap()
-        .tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ ");
+    // let mut downloaded = 0;
+    // let total_size = 231231231;
 
-    println!(
-        "{} {}Resolving packages...",
-        style("[1/4]").bold().dim(),
-        LOOKING_GLASS
-    );
-    println!(
-        "{} {}Fetching packages...",
-        style("[2/4]").bold().dim(),
-        TRUCK
-    );
+    // let pb = ProgressBar::new(total_size);
+    // pb.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+    //     .unwrap()
+    //     .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
+    //     .progress_chars("#>-"));
 
-    println!(
-        "{} {}Linking dependencies...",
-        style("[3/4]").bold().dim(),
-        CLIP
-    );
-    let deps = 1232;
-    let pb = ProgressBar::new(deps);
-    for _ in 0..deps {
-        thread::sleep(Duration::from_millis(3));
-        pb.inc(1);
-    }
-    pb.finish_and_clear();
+    // while downloaded < total_size {
+    //     let new = min(downloaded + 223211, total_size);
+    //     downloaded = new;
+    //     pb.set_position(new);
+    //     thread::sleep(Duration::from_millis(12));
+    // }
+
+    // pb.finish_with_message("downloaded");
     let matches = Command::new("hx")
         .version("0.1") //Todo make this env variable
         .about("Utility to split a file into n number of encrypted secrets - no password needed.")

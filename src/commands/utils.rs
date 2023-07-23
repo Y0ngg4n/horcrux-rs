@@ -35,88 +35,82 @@
 //         Ok(len)
 //     }
 // }
-
+//https://docs.rs/aead/latest/aead/stream/struct.Encryptor.html#method.encrypt_next_in_place
 
 use chacha20poly1305::{
-    aead::{stream, Aead, NewAead, Error, AeadCore, Key}, 
-    XChaCha20Poly1305, Nonce
+    aead::{stream::{self, EncryptorBE32, NewStream}, Aead, Error, AeadCore, AeadInPlace}, 
+    XChaCha20Poly1305, XNonce, Key, KeyInit
 };
-use rand::{rngs::OsRng, RngCore};
 use std::{
-    fs::{self, File},
-    io::{Read, Write, BufReader, self}, path::PathBuf,
+    fs::{File},
+    io::{Read, Write},
 };
 
 
-const TWO_GB: i64 = 2 * 1024 * 1024 * 1024;
-
-pub fn encrypt_small_file(
-    filepath: &str,
-    key: &[u8; 32],
-    nonce: &[u8; 24],
-) -> Result<Vec<u8>, std::io::Error> {
-    let cipher = XChaCha20Poly1305::new(key.into());
-    let file_data = fs::read(filepath)?;
-    let encrypted_file = cipher
-        .encrypt(nonce.into(), file_data.as_ref())
-        .map_err(|err| ("UH OH"))
-        .unwrap();
-
-    Ok(encrypted_file)
-}
-
-
-pub fn decrypt_small_file(
-    encrypted_file: &mut File,
-    key: &[u8; 32],
-    nonce: &[u8; 24],
-) -> Result<Vec<u8>, std::io::Error> {
-    let cipher = XChaCha20Poly1305::new(key.into());
-
-    let mut file_data = Vec::new();
-    encrypted_file.read_to_end(&mut file_data)?;
-
-    let decrypted_file = cipher
-        .decrypt(nonce.into(), file_data.as_ref())
-        .map_err(|err:Error| (err)).unwrap();
-    Ok(decrypted_file)
-}
-
-
-fn encrypt_large_file(
-    source_file_path: &str,
-    dist_file_path: &str,
-    key: &[u8; 32],
-    nonce: &[u8; 19],
+pub fn encrypt_file(
+    source: &mut File,
+    destination: &mut File,
+    key: &Key,
+    nonce: &XNonce,
 ) -> Result<(), std::io::Error> {
-    let aead = XChaCha20Poly1305::new(key.as_ref().into());
-    let mut stream_encryptor = stream::EncryptorBE32::from_aead(aead, nonce.as_ref().into());
-    const BUFFER_LEN: usize = 500;
-    let mut buffer = [0u8; BUFFER_LEN];
-
-    let mut source_file = File::open(source_file_path)?;
-    let mut dist_file = File::create(dist_file_path)?;
+    let aead = XChaCha20Poly1305::new(&key);
+    let mut stream_encryptor = stream::EncryptorBE32::from_aead(aead, nonce.as_slice().into());
+    const BUFFER_LENGTH: usize = 500;
+    let mut buffer = [0u8; BUFFER_LENGTH];
 
     loop {
-        let read_count = source_file.read(&mut buffer)?;
-
-        if read_count == BUFFER_LEN {
+        let read_count = source.read(&mut buffer)?;
+        if read_count == BUFFER_LENGTH {
             let ciphertext = stream_encryptor
                 .encrypt_next(buffer.as_slice())
                 .map_err(|err:Error| (err)).unwrap();
-            dist_file.write(&ciphertext)?;
+            destination.write(&ciphertext)?;
         } else {
             let ciphertext = stream_encryptor
                 .encrypt_last(&buffer[..read_count])
                 .map_err(|err:Error| (err)).unwrap();
-            dist_file.write(&ciphertext)?;
+            destination.write(&ciphertext)?;
+            break;
+        }
+    }
+    Ok(())
+}
+
+
+
+pub fn decrypt_file(
+    encrypted_source: &mut File,
+    destination: &mut File,
+    key: &Key,
+    nonce: &XNonce,
+) -> Result<(), std::io::Error> {
+    let aead = XChaCha20Poly1305::new(&key);
+    let mut stream_decryptor = stream::DecryptorBE32::from_aead(aead, nonce.as_slice().into());
+
+    const BUFFER_LENGTH: usize = 500 + 16;
+    let mut buffer = [0u8; BUFFER_LENGTH];
+
+    loop {
+        let read_count = encrypted_source.read(&mut buffer)?;
+
+        if read_count == BUFFER_LENGTH {
+            let plaintext = stream_decryptor
+                .decrypt_next(buffer.as_slice())
+                .map_err(|err:Error| (err)).unwrap();
+            destination.write(&plaintext)?;
+        } else if read_count == 0 {
+            break;
+        } else {
+            let plaintext = stream_decryptor
+                .decrypt_last(&buffer[..read_count])
+                .map_err(|err:Error| (err)).unwrap();
+            destination.write(&plaintext)?;
             break;
         }
     }
 
     Ok(())
 }
-
 
 pub enum CliError {
     IOError(std::io::Error),
@@ -126,3 +120,7 @@ pub enum CliError {
     EncryptionError,
     CryptographyError
 }
+
+
+
+
