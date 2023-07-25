@@ -1,20 +1,22 @@
+use crate::commands::horcrux;
+use chacha20poly1305::aead::OsRng;
+use clap::builder::OsStr;
+use rand::RngCore;
+use sharks::{Share, Sharks};
 use std::{
+    borrow::BorrowMut,
+    clone,
     error::Error,
     fs::{self, File, OpenOptions},
-    io::{BufWriter, Read, self},
+    io::{self, BufReader, BufWriter, Cursor, Read, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
-    time::{SystemTime}, borrow::BorrowMut
-};
-use chacha20poly1305::{
-    aead::{Aead, AeadCore, KeyInit, OsRng},
-    XChaCha20Poly1305, XNonce, Key
+    time::SystemTime, cell::RefCell,
 };
 
-
-use clap::builder::OsStr;
-use sharks::{Share, Sharks};
-
-use super::{horcrux::HorcruxHeader, utils::encrypt_file};
+use super::{
+    horcrux::{Horcrux, HorcruxHeader},
+    utils::encrypt_file,
+};
 
 pub fn split(
     path: &PathBuf,
@@ -23,17 +25,19 @@ pub fn split(
     threshold: u8,
 ) -> Result<(), Box<dyn Error>> {
     // let mut key = [0u8; 32];
-    let key: Key = XChaCha20Poly1305::generate_key(&mut OsRng);
-    let nonce: XNonce = XChaCha20Poly1305::generate_nonce(&mut OsRng);
+    let mut key = [0u8; 32];
+    let mut nonce = [0u8; 19];
+    OsRng.fill_bytes(&mut key);
+    OsRng.fill_bytes(&mut nonce);
+
     let crypto_shark = Sharks(threshold);
-    
+
     //Break up key, nonce into same number of fragments
     let key_dealer = crypto_shark.dealer(key.as_slice());
     let key_fragments: Vec<Share> = key_dealer.take(total as usize).collect();
-    
+
     let nonce_dealer = crypto_shark.dealer(nonce.as_slice());
     let nonce_fragments: Vec<Share> = nonce_dealer.take(total as usize).collect();
-
 
     let timestamp = SystemTime::now();
 
@@ -44,11 +48,13 @@ pub fn split(
     } else if !destination_dir.is_dir() {
         //Return error
     }
-    
-    let default_file_name = OsStr::from("horcrux.txt");
 
-    let canonical_filename = &path.file_name().unwrap_or(&default_file_name).to_string_lossy();
-    
+    let default_file_name = OsStr::from("horcrux.txt");
+    let canonical_filename = &path
+        .file_name()
+        .unwrap_or(&default_file_name)
+        .to_string_lossy();
+    let file_stem = path.file_stem().unwrap().to_string_lossy();
     let mut horcrux_files: Vec<File> = Vec::with_capacity(total as usize);
 
     for i in 0..total {
@@ -65,40 +71,45 @@ pub fn split(
             key_fragment: key_fragment,
         };
 
-        let json_header = serde_json::to_string_pretty(&header)?;
+        let json_header = serde_json::to_string(&header)?;
 
-        let file_stem = path.file_stem().unwrap().to_string_lossy();
-
-        let horcrux_filename = format!(
-            "{}_{}_of_{}.horcrux",
-            file_stem, index, total
-        );
+        let horcrux_filename = format!("{}_{}_of_{}.horcrux", file_stem, index, total);
 
         let horcrux_path = Path::new(destination).join(&horcrux_filename);
 
         let horcrux_file: File = OpenOptions::new()
+            .read(true)
+            .append(true)
             .create(true)
             .write(true)
-            .append(true)
             .open(&horcrux_path)?;
-        
         horcrux_files.push(horcrux_file);
         let contents = formatted_header(index, total, json_header);
         fs::write(&horcrux_path, contents)?;
     }
 
+    /* Strategy
+    1) In this state we have total `n` number of files only containing headers.
+    2) We will use the first file in the to write the encrypted contents into and then seek it after the headers
+    and copy it to the rest.
+    */
+    let mut contents_to_encrypt = File::open(&path)?;
+    let mut initial_horcrux: &File = &horcrux_files[0];
 
-    //Strategy here is to pass the first horcrux file
-    let mut contents = File::open(path)?;
-    let mut initial_horcrux = horcrux_files[0];
+    let read_pointer: u64 = initial_horcrux.seek(SeekFrom::End(0))?;
+    let mut cloned_horcrux = initial_horcrux.try_clone()?;
 
-    encrypt_file(&mut contents, &mut initial_horcrux, &key, &nonce).expect("Error encrypting your file.");
-    for horcrux in horcrux_files.iter().skip(1) {
-        let mut writer = BufWriter::new(horcrux);
-        io::copy(&mut initial_horcrux.take(u64::MAX), &mut writer)?;
-    }
-
+    encrypt_file(&mut contents_to_encrypt, &mut cloned_horcrux, &key, &nonce)
+        .expect("Error encrypting your file.");
     
+    cloned_horcrux.seek(SeekFrom::Start(read_pointer))?;
+
+
+    //This seems to only copy on the first loop then forgets the rest ... ?
+    for horcrux in horcrux_files.iter().skip(1) { //i in 1..horcrux_files.len()
+        let mut writer = BufWriter::new(horcrux);
+        io::copy(&mut cloned_horcrux, &mut writer).expect("Something wrong");
+    }
     Ok(())
 }
 
