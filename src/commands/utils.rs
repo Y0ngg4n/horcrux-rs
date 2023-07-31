@@ -2,7 +2,7 @@ use chacha20poly1305::{
     aead::{stream::{self}, Error}, 
     XChaCha20Poly1305, KeyInit
 };
-use std::{ fs::File, io::{Read, Write}};
+use std::{ fs::File, io::{Read, Write}, fmt};
 
 pub fn encrypt_file(
     source: &mut File,
@@ -32,7 +32,6 @@ pub fn encrypt_file(
     }
     Ok(())
 }
-
 
 
 pub fn decrypt_file(
@@ -80,3 +79,13 @@ pub enum CliError {
 
 
 
+impl fmt::Display for CliError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            CliError::ParseError(f) => write!(f, "Custom Error 1 occurred."),
+            CliError::InputError => write!(f, "Custom Error 1 occurred."),
+            CliError::CryptographyError => write!(f, "Custom Error 2 occurred."),
+            // Handle more error variants here
+        }
+    }
+}

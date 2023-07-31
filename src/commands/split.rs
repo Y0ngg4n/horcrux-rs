@@ -1,21 +1,18 @@
-use crate::commands::horcrux;
 use chacha20poly1305::aead::OsRng;
 use clap::builder::OsStr;
 use rand::RngCore;
 use sharks::{Share, Sharks};
 use std::{
-    borrow::BorrowMut,
-    clone,
     error::Error,
     fs::{self, File, OpenOptions},
-    io::{self, BufReader, BufWriter, Cursor, Read, Seek, SeekFrom, Write},
+    io::{self, BufWriter, Seek, SeekFrom},
     path::{Path, PathBuf},
-    time::SystemTime, cell::RefCell,
+    time::SystemTime,
 };
 
 use super::{
-    horcrux::{Horcrux, HorcruxHeader},
-    utils::encrypt_file,
+    horcrux::HorcruxHeader,
+    utils::{encrypt_file, CliError},
 };
 
 pub fn split(
@@ -24,7 +21,7 @@ pub fn split(
     total: u8,
     threshold: u8,
 ) -> Result<(), Box<dyn Error>> {
-    // let mut key = [0u8; 32];
+    
     let mut key = [0u8; 32];
     let mut nonce = [0u8; 19];
     OsRng.fill_bytes(&mut key);
@@ -32,7 +29,7 @@ pub fn split(
 
     let crypto_shark = Sharks(threshold);
 
-    //Break up key, nonce into same number of fragments
+    //Break up key, nonce into same number of n fragments
     let key_dealer = crypto_shark.dealer(key.as_slice());
     let key_fragments: Vec<Share> = key_dealer.take(total as usize).collect();
 
@@ -43,13 +40,13 @@ pub fn split(
 
     let destination_dir = Path::new(destination);
     if !destination_dir.exists() {
-        let err = format!("Error cannot place horcruxes in directory {}. Try creating them in a different directory.", destination);
+        let err = format!("Error cannot place horcruxes in directory `{}`. Try creating them in a different directory.", destination);
         fs::create_dir_all(destination_dir).expect(&err);
     } else if !destination_dir.is_dir() {
         //Return error
     }
 
-    let default_file_name = OsStr::from("horcrux.txt");
+    let default_file_name = OsStr::from("piped.horcrux.txt");
     let canonical_filename = &path
         .file_name()
         .unwrap_or(&default_file_name)
@@ -89,12 +86,13 @@ pub fn split(
     }
 
     /* Strategy
-    1) In this state we have total `n` number of files only containing headers.
-    2) We will use the first file in the to write the encrypted contents into and then seek it after the headers
+    1. In this state we have total `n` number of files only containing headers.
+    2. We will use the first file to write the encrypted contents into and then seek the first file after its formatted headers to copy the encrypted contents to the rest of the files
     and copy it to the rest.
     */
     let mut contents_to_encrypt = File::open(&path)?;
     let mut initial_horcrux: &File = &horcrux_files[0];
+    // let mut tmp_file = OpenOptions::new().read(true).write(true).truncate(true).append(true).open("temp.txt")?;
 
     let read_pointer: u64 = initial_horcrux.seek(SeekFrom::End(0))?;
     let mut cloned_horcrux = initial_horcrux.try_clone()?;
@@ -102,11 +100,9 @@ pub fn split(
     encrypt_file(&mut contents_to_encrypt, &mut cloned_horcrux, &key, &nonce)
         .expect("Error encrypting your file.");
     
-    cloned_horcrux.seek(SeekFrom::Start(read_pointer))?;
 
-
-    //This seems to only copy on the first loop then forgets the rest ... ?
-    for horcrux in horcrux_files.iter().skip(1) { //i in 1..horcrux_files.len()
+    for horcrux in horcrux_files.iter().skip(1) {
+        cloned_horcrux.seek(SeekFrom::Start(read_pointer))?;
         let mut writer = BufWriter::new(horcrux);
         io::copy(&mut cloned_horcrux, &mut writer).expect("Something wrong");
     }
@@ -116,6 +112,5 @@ pub fn split(
 //Refactor this into the struct and call it as a method
 fn formatted_header(index: u8, total: u8, json_header: String) -> String {
     let remaining = total - 1;
-    let file = format!("?? THIS FILE IS A HORCRUX. \n?? IT IS ONE OF {total} HORCRUXES THAT EACH CONTAIN PART OF AN ORIGINAL FILE. \n?? THIS IS HORCRUX NUMBER {index} of {total}. \n?? IN ORDER TO RESURRECT THIS ORIGINAL FILE YOU MUST FIND THE OTHER {remaining} HORCRUXES AND THEN BIND THEM USING THE PROGRAM FOUND AT THE FOLLOWING URL \n?? https://github.com \n \n-- HEADER --\n{json_header} \n-- BODY --\n");
-    return file;
+    return format!("?? THIS FILE IS A HORCRUX. \n?? IT IS ONE OF {total} HORCRUXES THAT EACH CONTAIN PART OF AN ORIGINAL FILE. \n?? THIS IS HORCRUX NUMBER {index} of {total}. \n?? IN ORDER TO RESURRECT THIS ORIGINAL FILE YOU MUST FIND THE OTHER {remaining} HORCRUXES AND THEN BIND THEM USING THE PROGRAM FOUND AT THE FOLLOWING URL \n?? https://github.com \n \n-- HEADER --\n{json_header} \n-- BODY --\n");
 }
