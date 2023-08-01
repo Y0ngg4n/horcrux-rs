@@ -7,16 +7,16 @@ use std::{
     fs::{self, File, OpenOptions},
     io::{self, Seek, SeekFrom, LineWriter, Write},
     path::{Path, PathBuf},
-    time::SystemTime, cell::RefCell,
+    time::SystemTime,
 };
 
 use crate::crypto::encrypt_file;
 
-use super::horcrux::HorcruxHeader;
+use super::horcrux::{HorcruxHeader, formatted_header};
 
 pub fn split(
-    path: &PathBuf,
-    destination: &str,
+    source: &PathBuf,
+    destination: &PathBuf,
     total: u8,
     threshold: u8,
 ) -> Result<(), Box<dyn Error>> {
@@ -36,22 +36,18 @@ pub fn split(
 
     let timestamp = SystemTime::now();
 
-    let destination_dir = Path::new(destination);
-    if !destination_dir.exists() {
-        let err = format!("Error cannot place horcruxes in directory `{}`. Try creating them in a different directory.", destination);
-        fs::create_dir_all(destination_dir).expect(&err);
-    } else if !destination_dir.is_dir() {
-        //Return error
+    if !destination.exists() {
+        let err = format!("Error cannot place horcruxes in directory `{}`. Try creating them in a different directory.", destination.to_string_lossy());
+        fs::create_dir_all(destination).expect(&err);
     }
-
     let default_file_name = OsStr::from("piped.horcrux.txt");
     let default_file_stem = OsStr::from("piped.horcrux");
 
-    let canonical_filename = &path
+    let canonical_filename = &source
         .file_name()
         .unwrap_or(&default_file_name)
         .to_string_lossy();
-    let file_stem = path
+    let file_stem = &source
         .file_stem()
         .unwrap_or(&default_file_stem)
         .to_string_lossy();
@@ -72,10 +68,9 @@ pub fn split(
         };
 
         let json_header = serde_json::to_string(&header)?;
-
         let horcrux_filename = format!("{}_{}_of_{}.horcrux", file_stem, index, total);
 
-        let horcrux_path = Path::new(destination).join(&horcrux_filename);
+        let horcrux_path = Path::new(&destination).join(&horcrux_filename);
 
         let horcrux_file: File = OpenOptions::new()
             .read(true)
@@ -94,16 +89,16 @@ pub fn split(
 
     /* Strategy
     1. In this state we have total `n` number of files only containing headers.
-    2. We will use the first file to write the encrypted contents into and then seek the first file after its formatted headers to copy the encrypted contents to the rest of the files
-    and copy it to the rest.
+    2. We will use the first file to write the encrypted contents into and then seek the first file after its formatted headers to copy the encrypted contents to the rest of the files.
     */
-    let mut contents_to_encrypt = File::open(&path)?;
+    let mut contents_to_encrypt = File::open(&source)?;
     let mut initial_horcrux: &File = &horcrux_files[0];
 
     let read_pointer: u64 = initial_horcrux.seek(SeekFrom::End(0))?;
-    let mut cloned_horcrux = initial_horcrux.try_clone()?;
 
-    encrypt_file(&mut contents_to_encrypt, &mut cloned_horcrux, &key, &nonce)
+    let mut horcrux_cp = initial_horcrux.try_clone()?;
+
+    encrypt_file(&mut contents_to_encrypt, &mut horcrux_cp, &key, &nonce)
         .expect("Error encrypting your file.");
 
     for horcrux in horcrux_files.iter().skip(1) {
@@ -113,8 +108,4 @@ pub fn split(
     Ok(())
 }
 
-//Refactor this into the struct and call it as a method
-fn formatted_header(index: u8, total: u8, json_header: String) -> String {
-    let remaining = total - 1;
-    return format!("?? THIS FILE IS A HORCRUX. \n?? IT IS ONE OF {total} HORCRUXES THAT EACH CONTAIN PART OF AN ORIGINAL FILE. \n?? THIS IS HORCRUX NUMBER {index} of {total}. \n?? IN ORDER TO RESURRECT THIS ORIGINAL FILE YOU MUST FIND THE OTHER {remaining} HORCRUXES AND THEN BIND THEM USING THE PROGRAM FOUND AT THE FOLLOWING URL \n?? https://github.com \n \n-- HEADER --\n{json_header} \n-- BODY --\n");
-}
+
