@@ -5,15 +5,14 @@ use sharks::{Share, Sharks};
 use std::{
     error::Error,
     fs::{self, File, OpenOptions},
-    io::{self, BufWriter, Seek, SeekFrom},
+    io::{self, Seek, SeekFrom, LineWriter, Write},
     path::{Path, PathBuf},
-    time::SystemTime,
+    time::SystemTime, cell::RefCell,
 };
 
-use super::{
-    horcrux::HorcruxHeader,
-    utils::{encrypt_file, CliError},
-};
+use crate::crypto::encrypt_file;
+
+use super::horcrux::HorcruxHeader;
 
 pub fn split(
     path: &PathBuf,
@@ -21,7 +20,6 @@ pub fn split(
     total: u8,
     threshold: u8,
 ) -> Result<(), Box<dyn Error>> {
-    
     let mut key = [0u8; 32];
     let mut nonce = [0u8; 19];
     OsRng.fill_bytes(&mut key);
@@ -47,11 +45,16 @@ pub fn split(
     }
 
     let default_file_name = OsStr::from("piped.horcrux.txt");
+    let default_file_stem = OsStr::from("piped.horcrux");
+
     let canonical_filename = &path
         .file_name()
         .unwrap_or(&default_file_name)
         .to_string_lossy();
-    let file_stem = path.file_stem().unwrap().to_string_lossy();
+    let file_stem = path
+        .file_stem()
+        .unwrap_or(&default_file_stem)
+        .to_string_lossy();
     let mut horcrux_files: Vec<File> = Vec::with_capacity(total as usize);
 
     for i in 0..total {
@@ -80,9 +83,13 @@ pub fn split(
             .create(true)
             .write(true)
             .open(&horcrux_path)?;
-        horcrux_files.push(horcrux_file);
+
         let contents = formatted_header(index, total, json_header);
-        fs::write(&horcrux_path, contents)?;
+        let mut line_writer = LineWriter::new(&horcrux_file);
+
+        line_writer.write_all(contents.as_bytes())?;
+        drop(line_writer);
+        horcrux_files.push(horcrux_file);
     }
 
     /* Strategy
@@ -92,19 +99,16 @@ pub fn split(
     */
     let mut contents_to_encrypt = File::open(&path)?;
     let mut initial_horcrux: &File = &horcrux_files[0];
-    // let mut tmp_file = OpenOptions::new().read(true).write(true).truncate(true).append(true).open("temp.txt")?;
 
     let read_pointer: u64 = initial_horcrux.seek(SeekFrom::End(0))?;
     let mut cloned_horcrux = initial_horcrux.try_clone()?;
 
     encrypt_file(&mut contents_to_encrypt, &mut cloned_horcrux, &key, &nonce)
         .expect("Error encrypting your file.");
-    
 
     for horcrux in horcrux_files.iter().skip(1) {
-        cloned_horcrux.seek(SeekFrom::Start(read_pointer))?;
-        let mut writer = BufWriter::new(horcrux);
-        io::copy(&mut cloned_horcrux, &mut writer).expect("Something wrong");
+        initial_horcrux.seek(SeekFrom::Start(read_pointer))?;
+        io::copy(&mut initial_horcrux, &mut horcrux.to_owned()).expect("Something wrong");
     }
     Ok(())
 }
