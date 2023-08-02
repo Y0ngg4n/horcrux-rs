@@ -1,8 +1,6 @@
+use anyhow::anyhow;
 use chacha20poly1305::{
-    aead::{
-        stream::{self},
-        Error,
-    },
+    aead::stream::{self},
     KeyInit, XChaCha20Poly1305,
 };
 use std::{
@@ -26,13 +24,13 @@ pub fn encrypt_file(
         if read_count == BUFFER_LENGTH {
             let ciphertext = stream_encryptor
                 .encrypt_next(buffer.as_slice())
-                .map_err(|err: Error| (err))
+                .map_err(|err| anyhow!(err))
                 .unwrap();
             destination.write(&ciphertext)?;
         } else {
             let ciphertext = stream_encryptor
                 .encrypt_last(&buffer[..read_count])
-                .map_err(|err: Error| (err))
+                .map_err(|err| anyhow!(err))
                 .unwrap();
             destination.write(&ciphertext)?;
             break;
@@ -58,7 +56,7 @@ pub fn decrypt_file(
         if read_count == BUFFER_LENGTH {
             let plaintext = stream_decryptor
                 .decrypt_next(buffer.as_slice())
-                .map_err(|err: Error| (err))
+                .map_err(|err| anyhow!(err))
                 .unwrap();
             destination.write(&plaintext)?;
         } else if read_count == 0 {
@@ -66,7 +64,7 @@ pub fn decrypt_file(
         } else {
             let plaintext = stream_decryptor
                 .decrypt_last(&buffer[..read_count])
-                .map_err(|err: Error| (err))
+                .map_err(|err| anyhow!(err))
                 .unwrap();
             destination.write(&plaintext)?;
             break;

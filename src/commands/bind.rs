@@ -1,14 +1,17 @@
-use crate::{crypto::decrypt_file, commands::horcrux::{Horcrux, HorcruxHeader}};
+use crate::{
+    commands::horcrux::{Horcrux, HorcruxHeader},
+    crypto::decrypt_file,
+};
+use anyhow::anyhow;
 use sharks::{Share, Sharks};
 use std::{
-    error::Error,
     fs::{self, File, OpenOptions},
     path::PathBuf,
 };
 
 //Strategy is to get all files ending in .horcrux or .hx and then parse them. Next we filter them by matching nonce
 fn find_horcrux_file_paths(directory: &PathBuf) -> Vec<PathBuf> {
-    fs::read_dir(directory)
+    fs::read_dir(&directory)
         .expect("Failed to read directory")
         .flat_map(|entry| {
             let entry = entry.expect("Failed to read directory entry");
@@ -29,12 +32,17 @@ fn find_horcrux_file_paths(directory: &PathBuf) -> Vec<PathBuf> {
 
 //Strategy is to find all horcrux files in a directory find any matches with the first one
 // And try recovery from there
-pub fn bind(directory: &PathBuf) -> Result<(), Box<dyn Error>> {
-    let horcrux_paths = find_horcrux_file_paths(directory);
+pub fn bind(directory: &PathBuf, destination: &PathBuf) -> Result<(), anyhow::Error> {
+    let horcrux_paths = find_horcrux_file_paths(&directory);
+
+    if !destination.exists() {
+        let err = format!("Error cannot place horcruxes in directory `{}`. Try creating them in a different directory.", destination.to_string_lossy());
+        fs::create_dir_all(&destination).expect(&err);
+    }
 
     let horcruxes: Vec<Horcrux> = horcrux_paths
         .iter()
-        .flat_map(|entry| Horcrux::from_path(entry))
+        .flat_map(|entry| Horcrux::from_path(&entry))
         .collect();
 
     let mut key_shares: Vec<Share> = Vec::new();
@@ -43,15 +51,16 @@ pub fn bind(directory: &PathBuf) -> Result<(), Box<dyn Error>> {
 
     let initial_horcrux = &horcruxes[0];
     let initial_header: &HorcruxHeader = &initial_horcrux.header;
-
     let threshold: u8 = initial_header.threshold;
 
     for horcrux in &horcruxes {
         if horcrux.header.canonical_file_name == initial_header.canonical_file_name.to_owned()
             && horcrux.header.timestamp == initial_header.timestamp
         {
-            let kshare: Share = Share::try_from(horcrux.header.key_fragment.as_slice())?;
-            let nshare: Share = Share::try_from(horcrux.header.nonce_fragment.as_slice())?;
+            let kshare: Share = Share::try_from(horcrux.header.key_fragment.as_slice())
+                .map_err(|op| anyhow!(op))?;
+            let nshare: Share = Share::try_from(horcrux.header.nonce_fragment.as_slice())
+                .map_err(|op| anyhow!(op))?;
             key_shares.push(kshare);
             nonce_shares.push(nshare);
             matching_horcruxes.push(&horcrux);
@@ -60,8 +69,9 @@ pub fn bind(directory: &PathBuf) -> Result<(), Box<dyn Error>> {
 
     if !(matching_horcruxes.len() > 0 && matching_horcruxes.len() >= threshold.to_owned() as usize)
     {
-        //Err
-        println!("Cannot find enough horcruxes to recover the file: found {:?} horcruxes and {:?} are required to recover the file", matching_horcruxes.len(), threshold)
+        return Err(anyhow!(
+            format!("cannot find enough horcruxes to recover the file: found {:?} horcruxes and {:?} are required to recover the file", matching_horcruxes.len(), threshold)
+        ));
     }
     //Recover the secret
     let crypto_shark = Sharks(threshold);

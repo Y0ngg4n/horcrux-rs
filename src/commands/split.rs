@@ -2,24 +2,21 @@ use chacha20poly1305::aead::OsRng;
 use clap::builder::OsStr;
 use rand::RngCore;
 use sharks::{Share, Sharks};
+use crate::crypto::encrypt_file;
+use super::horcrux::{HorcruxHeader, formatted_header};
 use std::{
-    error::Error,
     fs::{self, File, OpenOptions},
     io::{self, Seek, SeekFrom, LineWriter, Write},
     path::{Path, PathBuf},
     time::SystemTime,
 };
 
-use crate::crypto::encrypt_file;
-
-use super::horcrux::{HorcruxHeader, formatted_header};
-
 pub fn split(
     source: &PathBuf,
     destination: &PathBuf,
     total: u8,
     threshold: u8,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<(), anyhow::Error> {
     let mut key = [0u8; 32];
     let mut nonce = [0u8; 19];
     OsRng.fill_bytes(&mut key);
