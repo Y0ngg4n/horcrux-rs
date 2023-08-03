@@ -45,14 +45,14 @@ pub fn bind(source: &PathBuf, destination: &PathBuf) -> Result<(), anyhow::Error
         return Err(anyhow!(err));
     }
 
-    let horcruxes: Vec<Horcrux> =
-        horcrux_paths
-            .into_iter()
-            .try_fold(Vec::new(), |mut acc: Vec<Horcrux>, entry: PathBuf| -> Result<Vec<Horcrux>, Error> {
-                let hx = Horcrux::from_path(&entry)?;
-                acc.push(hx);
-                Ok(acc)
-            })?;
+    let horcruxes: Vec<Horcrux> = horcrux_paths.into_iter().try_fold(
+        Vec::new(),
+        |mut acc: Vec<Horcrux>, entry: PathBuf| -> Result<Vec<Horcrux>, Error> {
+            let hx = Horcrux::from_path(&entry)?;
+            acc.push(hx);
+            Ok(acc)
+        },
+    )?;
 
     let initial_horcrux = &horcruxes[0];
     let initial_header: &HorcruxHeader = &initial_horcrux.header;

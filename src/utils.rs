@@ -35,11 +35,12 @@ pub fn is_qualified_file(f: &str) -> Result<PathBuf, String> {
     if file.is_file() && !file.is_dir() && !file.is_symlink() {
         Ok(file)
     } else {
-        Err(format!("`{}` is not a file.", file.to_string_lossy()))
+        Err(format!(
+            "`{}` is not a file or does not exist.",
+            file.to_string_lossy()
+        ))
     }
 }
-
-
 
 const CHUNK_SIZE: usize = 4096; // Set your desired chunk size here
 
@@ -60,6 +61,5 @@ pub fn handle_std_in() -> Result<PathBuf, std::io::Error> {
         }
         temp_file.write_all(&buf[..bytes_read])?;
     }
-
     Ok(temp_path)
 }

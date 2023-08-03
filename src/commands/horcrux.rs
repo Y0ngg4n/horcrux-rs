@@ -64,8 +64,7 @@ impl Horcrux {
         }
         file.seek(SeekFrom::Start(total_bytes_scanned as u64))?;
 
-        let header =
-            serde_json::from_str(&header_content)?;
+        let header = serde_json::from_str(&header_content)?;
 
         Ok(Self {
             path: path.to_path_buf(),
@@ -74,7 +73,6 @@ impl Horcrux {
         })
     }
 }
-
 
 //Refactor this into the struct and call it as a method
 pub fn formatted_header(index: u8, total: u8, json_header: String) -> String {

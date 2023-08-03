@@ -1,12 +1,12 @@
+use super::horcrux::{formatted_header, HorcruxHeader};
+use crate::crypto::encrypt_file;
 use chacha20poly1305::aead::OsRng;
 use clap::builder::OsStr;
 use rand::RngCore;
 use sharks::{Share, Sharks};
-use crate::crypto::encrypt_file;
-use super::horcrux::{HorcruxHeader, formatted_header};
 use std::{
     fs::{self, File, OpenOptions},
-    io::{self, Seek, SeekFrom, LineWriter, Write},
+    io::{self, LineWriter, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
     time::SystemTime,
 };
@@ -34,7 +34,10 @@ pub fn split(
     let timestamp = SystemTime::now();
 
     if !destination.exists() {
-        let err = format!("Cannot place horcruxes in directory `{}`. Try creating them in a different directory.", destination.to_string_lossy());
+        let err = format!(
+            "Cannot place horcruxes in directory `{}`. Try creating them in a different directory.",
+            destination.to_string_lossy()
+        );
         fs::create_dir_all(destination).expect(&err);
     }
     let default_file_name = OsStr::from("secret.txt");
@@ -103,5 +106,3 @@ pub fn split(
     }
     Ok(())
 }
-
-
