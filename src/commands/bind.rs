@@ -70,7 +70,7 @@ pub fn bind(directory: &PathBuf, destination: &PathBuf) -> Result<(), anyhow::Er
     if !(matching_horcruxes.len() > 0 && matching_horcruxes.len() >= threshold.to_owned() as usize)
     {
         return Err(anyhow!(
-            format!("cannot find enough horcruxes to recover the file: found {:?} horcruxes and {:?} are required to recover the file", matching_horcruxes.len(), threshold)
+            format!("Cannot find enough horcruxes to recover `{}` found {} horcruxes and {} are required to recover the file.",initial_header.canonical_file_name, matching_horcruxes.len(), threshold)
         ));
     }
     //Recover the secret
@@ -80,21 +80,20 @@ pub fn bind(directory: &PathBuf, destination: &PathBuf) -> Result<(), anyhow::Er
         .recover(&key_shares)
         .unwrap()
         .try_into()
-        .expect("Cannot recover key");
+        .expect("Cannot recover key.");
     let nonce: [u8; 19] = crypto_shark
         .recover(&nonce_shares)
         .unwrap()
         .try_into()
-        .expect("Cannot recover nonce");
+        .expect("Cannot recover nonce.");
 
     let mut recovered_file: File = OpenOptions::new()
         .create(true)
         .write(true)
-        .open(&initial_horcrux.header.canonical_file_name)
-        .unwrap();
+        .truncate(true)
+        .open(&initial_horcrux.header.canonical_file_name)?;
     let mut contents = initial_horcrux.contents.try_clone().unwrap();
 
-    decrypt_file(&mut contents, &mut recovered_file, &key, &nonce)
-        .expect("Cannot decrypt file contents");
+    decrypt_file(&mut contents, &mut recovered_file, &key, &nonce)?;
     Ok(())
 }

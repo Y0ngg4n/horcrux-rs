@@ -34,11 +34,11 @@ pub fn split(
     let timestamp = SystemTime::now();
 
     if !destination.exists() {
-        let err = format!("Error cannot place horcruxes in directory `{}`. Try creating them in a different directory.", destination.to_string_lossy());
+        let err = format!("Cannot place horcruxes in directory `{}`. Try creating them in a different directory.", destination.to_string_lossy());
         fs::create_dir_all(destination).expect(&err);
     }
-    let default_file_name = OsStr::from("piped.horcrux.txt");
-    let default_file_stem = OsStr::from("piped.horcrux");
+    let default_file_name = OsStr::from("secret.txt");
+    let default_file_stem = OsStr::from("secret");
 
     let canonical_filename = &source
         .file_name()
@@ -71,9 +71,9 @@ pub fn split(
 
         let horcrux_file: File = OpenOptions::new()
             .read(true)
-            .append(true)
             .create(true)
             .write(true)
+            .truncate(true)
             .open(&horcrux_path)?;
 
         let contents = formatted_header(index, total, json_header);
@@ -95,12 +95,11 @@ pub fn split(
 
     let mut horcrux_cp = initial_horcrux.try_clone()?;
 
-    encrypt_file(&mut contents_to_encrypt, &mut horcrux_cp, &key, &nonce)
-        .expect("Error encrypting your file.");
+    encrypt_file(&mut contents_to_encrypt, &mut horcrux_cp, &key, &nonce)?;
 
     for horcrux in horcrux_files.iter().skip(1) {
         initial_horcrux.seek(SeekFrom::Start(read_pointer))?;
-        io::copy(&mut initial_horcrux, &mut horcrux.to_owned()).expect("Something wrong");
+        io::copy(&mut initial_horcrux, &mut horcrux.to_owned())?;
     }
     Ok(())
 }
