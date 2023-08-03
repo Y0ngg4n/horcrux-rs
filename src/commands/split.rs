@@ -43,7 +43,7 @@ pub fn split(
     let default_file_name = OsStr::from("secret.txt");
     let default_file_stem = OsStr::from("secret");
 
-    let canonical_filename = &source
+    let canonical_file_name = &source
         .file_name()
         .unwrap_or(&default_file_name)
         .to_string_lossy();
@@ -58,13 +58,13 @@ pub fn split(
         let key_fragment = Vec::from(&key_fragments[i as usize]);
         let nonce_fragment = Vec::from(&nonce_fragments[i as usize]);
         let header = HorcruxHeader {
-            canonical_file_name: canonical_filename.to_string(),
-            timestamp: timestamp,
-            index: index,
-            total: total,
-            threshold: threshold,
-            nonce_fragment: nonce_fragment,
-            key_fragment: key_fragment,
+            canonical_file_name: canonical_file_name.to_string(),
+            timestamp,
+            index,
+            total,
+            threshold,
+            nonce_fragment,
+            key_fragment,
         };
 
         let json_header = serde_json::to_string(&header)?;
@@ -91,14 +91,14 @@ pub fn split(
     1. In this state we have total `n` number of files only containing headers.
     2. We will use the first file to write the encrypted contents into and then seek the first file after its formatted headers to copy the encrypted contents to the rest of the files.
     */
-    let mut contents_to_encrypt = File::open(&source)?;
+    let mut contents_to_encrypt = File::open(source)?;
     let mut initial_horcrux: &File = &horcrux_files[0];
 
     let read_pointer: u64 = initial_horcrux.seek(SeekFrom::End(0))?;
 
-    let mut horcrux_cp = initial_horcrux.try_clone()?;
+    let mut horcrux_handle = initial_horcrux.try_clone()?;
 
-    encrypt_file(&mut contents_to_encrypt, &mut horcrux_cp, &key, &nonce)?;
+    encrypt_file(&mut contents_to_encrypt, &mut horcrux_handle, &key, &nonce)?;
 
     for horcrux in horcrux_files.iter().skip(1) {
         initial_horcrux.seek(SeekFrom::Start(read_pointer))?;
@@ -106,3 +106,4 @@ pub fn split(
     }
     Ok(())
 }
+

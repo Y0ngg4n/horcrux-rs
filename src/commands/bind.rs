@@ -11,7 +11,7 @@ use std::{
 
 //Strategy is to get all files ending in .horcrux or .hx and then parse them. Next we filter them by matching nonce
 fn find_horcrux_file_paths(directory: &PathBuf) -> Result<Vec<PathBuf>, std::io::Error> {
-    let paths = fs::read_dir(&directory)?;
+    let paths = fs::read_dir(directory)?;
 
     let horcruxes: Vec<PathBuf> = paths
         .flat_map(|entry| {
@@ -35,9 +35,9 @@ fn find_horcrux_file_paths(directory: &PathBuf) -> Result<Vec<PathBuf>, std::io:
 //Strategy is to find all horcrux files in a directory find any matches with the first one
 // And try recovery from there
 pub fn bind(source: &PathBuf, destination: &PathBuf) -> Result<(), anyhow::Error> {
-    let horcrux_paths = find_horcrux_file_paths(&source)?;
+    let horcrux_paths = find_horcrux_file_paths(source)?;
 
-    if horcrux_paths.len() == 0 {
+    if horcrux_paths.is_empty() {
         let err = format!(
             "No horcrux files found in directory {}",
             source.to_string_lossy()
@@ -63,12 +63,11 @@ pub fn bind(source: &PathBuf, destination: &PathBuf) -> Result<(), anyhow::Error
     let mut matching_horcruxes: Vec<&Horcrux> = Vec::with_capacity(initial_header.total as usize);
 
     if !destination.exists() {
-        let err = format!("Error cannot place horcruxes in directory `{}`. Try creating them in a different directory.", destination.to_string_lossy());
-        fs::create_dir_all(&destination).expect(&err);
+        fs::create_dir_all(destination)?;
     }
 
     for horcrux in &horcruxes {
-        if horcrux.header.canonical_file_name == initial_header.canonical_file_name.to_owned()
+        if horcrux.header.canonical_file_name == initial_header.canonical_file_name
             && horcrux.header.timestamp == initial_header.timestamp
         {
             let kshare: Share = Share::try_from(horcrux.header.key_fragment.as_slice())
@@ -77,11 +76,11 @@ pub fn bind(source: &PathBuf, destination: &PathBuf) -> Result<(), anyhow::Error
                 .map_err(|op| anyhow!(op))?;
             key_shares.push(kshare);
             nonce_shares.push(nshare);
-            matching_horcruxes.push(&horcrux);
+            matching_horcruxes.push(horcrux);
         }
     }
 
-    if !(matching_horcruxes.len() > 0 && matching_horcruxes.len() >= threshold.to_owned() as usize)
+    if !(matching_horcruxes.is_empty() || matching_horcruxes.len() < threshold.to_owned() as usize)
     {
         return Err(anyhow!(
             format!("Cannot find enough horcruxes to recover `{}` found {} horcruxes and {} are required to recover the file.",initial_header.canonical_file_name, matching_horcruxes.len(), threshold)

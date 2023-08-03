@@ -26,13 +26,13 @@ pub fn encrypt_file(
                 .encrypt_next(buffer.as_slice())
                 .map_err(|err| anyhow!(err))
                 .unwrap();
-            destination.write(&ciphertext)?;
+            destination.write_all(&ciphertext)?;
         } else {
             let ciphertext = stream_encryptor
                 .encrypt_last(&buffer[..read_count])
                 .map_err(|err| anyhow!(err))
                 .unwrap();
-            destination.write(&ciphertext)?;
+            destination.write_all(&ciphertext)?;
             break;
         }
     }
@@ -58,7 +58,7 @@ pub fn decrypt_file(
                 .decrypt_next(buffer.as_slice())
                 .map_err(|err| anyhow!(err))
                 .unwrap();
-            destination.write(&plaintext)?;
+            destination.write_all(&plaintext)?;
         } else if read_count == 0 {
             break;
         } else {
@@ -66,10 +66,9 @@ pub fn decrypt_file(
                 .decrypt_last(&buffer[..read_count])
                 .map_err(|err| anyhow!(err))
                 .unwrap();
-            destination.write(&plaintext)?;
+            destination.write_all(&plaintext)?;
             break;
         }
     }
-    drop(destination);
     Ok(())
 }

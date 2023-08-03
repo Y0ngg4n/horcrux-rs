@@ -8,7 +8,7 @@ pub mod commands;
 pub mod crypto;
 pub mod utils;
 pub mod cli;
-
+mod tests;
 
 fn main() {
     println!("{}",BANNER);
@@ -22,7 +22,7 @@ fn main() {
             let threshold = &args.threshold;
             let destination = &args.destination;
             if threshold > shards {
-                let err = &err_command.error(ErrorKind::ArgumentConflict, "Threshold cannot be larger than shards.");
+                let err = err_command.error(ErrorKind::ArgumentConflict, "Threshold cannot be larger than shards.");
                 err.exit();
             }
 
@@ -35,7 +35,7 @@ fn main() {
             } else if file.is_some() {
                 source = file.as_ref().unwrap().to_path_buf();
             } else {
-                let err = &err_command.error(ErrorKind::Format, "No input file detected.");
+                let err = err_command.error(ErrorKind::Format, "No input file detected.");
                     err.exit();
             }
             let split_result = split(
@@ -48,7 +48,7 @@ fn main() {
             match split_result {
                 Ok(_) => println!("🔒 Created {} horcruxes", shards),
                 Err(e) => {
-                    let err = &err_command.error(ErrorKind::Format, e);
+                    let err = err_command.error(ErrorKind::Format, e);
                     err.exit();
                 }
             }
@@ -57,11 +57,11 @@ fn main() {
         Commands::Bind(args) => {
             let source = &args.source;
             let destination = &args.destination;
-                let result = bind(&source.as_ref().unwrap(), &destination.as_ref().unwrap());
+                let result = bind(source.as_ref().unwrap(), destination.as_ref().unwrap());
                 match result {
                     Ok(_) => println!("Recovered the secret! 🔑"),
                     Err(err) => {
-                        let err = &err_command.error(ErrorKind::ArgumentConflict, err);
+                        let err = err_command.error(ErrorKind::ArgumentConflict, err);
                         err.exit();
                     }
                 }
