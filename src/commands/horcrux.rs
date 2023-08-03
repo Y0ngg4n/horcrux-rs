@@ -62,11 +62,10 @@ impl Horcrux {
                 break; // Stop reading after reaching the body marker seek from here
             }
         }
-        file.seek(SeekFrom::Start(total_bytes_scanned as u64))
-            .expect("Failed seek horcrux file.");
+        file.seek(SeekFrom::Start(total_bytes_scanned as u64))?;
 
-        let header: HorcruxHeader =
-            serde_json::from_str(&header_content).expect("Failed to parse horcrux file header.");
+        let header =
+            serde_json::from_str(&header_content)?;
 
         Ok(Self {
             path: path.to_path_buf(),

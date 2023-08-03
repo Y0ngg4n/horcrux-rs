@@ -34,6 +34,7 @@ pub struct SplitArguments {
     pub file: Option<PathBuf>,
     #[arg(
         required = true, 
+        hide = true,
         short = 's', 
         long = "shards",
         help = "Number of shards to split the secret into.",

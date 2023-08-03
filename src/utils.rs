@@ -39,20 +39,27 @@ pub fn is_qualified_file(f: &str) -> Result<PathBuf, String> {
     }
 }
 
+
+
+const CHUNK_SIZE: usize = 4096; // Set your desired chunk size here
+
 //This function expects a smaller sized file and reads it into a buffer
 //It then writes its contents to a temporary file and returns its location (path)
 pub fn handle_std_in() -> Result<PathBuf, std::io::Error> {
     let mut temp_path = temp_dir();
-    let mut buf: Vec<u8> = Vec::new();
-    io::stdin()
-        .lock()
-        .read_to_end(&mut buf)
-        .expect("Buffer overflow. Please pipe in a smaller secret.");
     let file_name = "secret.txt";
     temp_path.push(file_name);
 
     let mut temp_file = File::create(&temp_path)?;
-    temp_file.write_all(&mut buf)?;
+
+    let mut buf = [0u8; CHUNK_SIZE];
+    loop {
+        let bytes_read = io::stdin().lock().read(&mut buf)?;
+        if bytes_read == 0 {
+            break;
+        }
+        temp_file.write_all(&buf[..bytes_read])?;
+    }
 
     Ok(temp_path)
 }
