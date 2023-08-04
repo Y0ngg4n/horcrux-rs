@@ -80,10 +80,10 @@ pub fn bind(source: &PathBuf, destination: &PathBuf) -> Result<(), anyhow::Error
         }
     }
 
-    if !(matching_horcruxes.is_empty() || matching_horcruxes.len() < threshold.to_owned() as usize)
+    if !(matching_horcruxes.is_empty() || matching_horcruxes.len() >= threshold.to_owned() as usize)
     {
         return Err(anyhow!(
-            format!("Cannot find enough horcruxes to recover `{}` found {} horcruxes and {} are required to recover the file.",initial_header.canonical_file_name, matching_horcruxes.len(), threshold)
+            format!("Cannot find enough horcruxes to recover `{}` found {} matching horcruxes and {} matches are required to recover the file.",initial_header.canonical_file_name, matching_horcruxes.len(), threshold)
         ));
     }
     //Recover the secret

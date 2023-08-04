@@ -8,10 +8,11 @@ pub mod commands;
 pub mod crypto;
 pub mod utils;
 pub mod cli;
-mod tests;
+#[cfg(test)]
+pub mod tests;
 
 fn main() {
-    println!("{}",BANNER);
+    println!("{BANNER}");
     let cli = Cli::parse();
     let mut err_command: clap::Command = Cli::command();
 
