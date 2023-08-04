@@ -108,7 +108,7 @@ pub fn bind(source: &PathBuf, destination: &PathBuf) -> Result<(), anyhow::Error
         .create(true)
         .write(true)
         .truncate(true)
-        .open(&initial_horcrux.header.canonical_file_name)?;
+        .open(destination.join(&initial_horcrux.header.canonical_file_name))?;
 
     let mut contents = initial_horcrux.contents.try_clone().unwrap();
 

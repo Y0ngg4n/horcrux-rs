@@ -47,7 +47,7 @@ impl Horcrux {
         let mut header_found: bool = false;
 
         for line in reader.lines() {
-            let line = line.expect("Failed to read line(s) in horcrux file.");
+            let line = line?;
             total_bytes_scanned += line.len() + 1;
 
             if line == "-- HEADER --" {
