@@ -112,7 +112,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    #[cfg(not(any(target_os = "windows")))]
     fn split_permission_fails() {
         let dir = PathBuf::from(".");
         let file_path = dir.join("cipher.txt");
