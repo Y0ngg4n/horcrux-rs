@@ -112,6 +112,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
     fn split_permission_fails() {
         let dir = PathBuf::from(".");
         let file_path = dir.join("cipher.txt");
@@ -121,7 +122,7 @@ mod tests {
             .write_all(b"Hello, world!")
             .expect("Should write to temp file");
         temp_file.flush().expect("Should write contents.");
-        let split_result = split(&dir, &PathBuf::from("/root"), 1, 1);
+        let split_result = split(&dir, &PathBuf::from("/"), 1, 1);
 
         assert!(split_result.is_err());
 
