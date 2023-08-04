@@ -39,6 +39,7 @@ fn main() {
                 let err = err_command.error(ErrorKind::Format, "No input file detected.");
                     err.exit();
             }
+            println!("🔮 Splitting your secret ...");
             let split_result = split(
                     &source, 
                     destination.as_ref().unwrap(), 
@@ -58,14 +59,15 @@ fn main() {
         Commands::Bind(args) => {
             let source = &args.source;
             let destination = &args.destination;
-                let result = bind(source.as_ref().unwrap(), destination.as_ref().unwrap());
-                match result {
-                    Ok(_) => println!("Recovered the secret! 🔑"),
-                    Err(err) => {
-                        let err = err_command.error(ErrorKind::ArgumentConflict, err);
-                        err.exit();
-                    }
+            println!("📖 Recovering your secret ...");
+            let result = bind(source.as_ref().unwrap(), destination.as_ref().unwrap());
+            match result {
+                Ok(_) => println!("🔑 Recovered the secret! "),
+                Err(err) => {
+                    let err = err_command.error(ErrorKind::ArgumentConflict, err);
+                    err.exit();
                 }
+            }
         }
     }
 }

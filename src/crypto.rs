@@ -1,4 +1,4 @@
-//Adapted from https://kerkour.com/rust-file-encryption
+//Solution made adapated from and made possible by: https://kerkour.com/rust-file-encryption
 use anyhow::anyhow;
 use chacha20poly1305::{
     aead::stream::{self},
@@ -17,7 +17,7 @@ pub fn encrypt_file(
 ) -> Result<(), anyhow::Error> {
     let aead = XChaCha20Poly1305::new(key.as_ref().into());
     let mut stream_encryptor = stream::EncryptorBE32::from_aead(aead, nonce.as_slice().into());
-    const BUFFER_LENGTH: usize = 500;
+    const BUFFER_LENGTH: usize = 500 + 16;
     let mut buffer = [0u8; BUFFER_LENGTH];
 
     loop {
