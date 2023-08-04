@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use clap::{Parser, Subcommand, Args, ColorChoice, ArgAction};
+use clap::{Parser, Subcommand, Args, ArgAction};
 use crate::utils::{is_qualified_path, shards_in_range, is_qualified_file};
 
 pub static BANNER: &str = " ██░ ██  ▒█████   ██▀███   ▄████▄   ██▀███   █    ██   ██████ ▄▄▄█████▓
@@ -13,18 +13,17 @@ pub static BANNER: &str = " ██░ ██  ▒█████   ██▀█�
  ░  ░  ░    ░ ░     ░     ░ ░         ░        ░           ░           
                           ░                                            ";
 
+
 #[derive(Parser)]
 #[command(
     name="horcrust",
     bin_name="hx", 
-    version = "0.0.1", 
-    color = ColorChoice::Always,
+    version = option_env!("HORCRUST_VERSION").unwrap_or("dev"),
     about = "Split a file into encrypted shards, no password required - secrecy preserved.", 
     long_about = "Horcrust is an encryption program that splits a file into encrypted shards. Users can set a threshold, defining the number required for secret recovery, eliminating the need for passwords. Horcrust supports piped input. For example, you can use it like this: cat secret.txt | hx split -s 3 -t 2.",
     subcommand_required = true,
     arg_required_else_help = true,
 )]
-#[command(propagate_version = true)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,

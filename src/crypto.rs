@@ -1,3 +1,4 @@
+//Adapted from https://kerkour.com/rust-file-encryption
 use anyhow::anyhow;
 use chacha20poly1305::{
     aead::stream::{self},
