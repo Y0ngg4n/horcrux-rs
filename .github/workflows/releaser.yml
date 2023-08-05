@@ -9,8 +9,6 @@ jobs:
   build_mac:
     name: Build for macOS
     runs-on: macos-latest
-    outputs:
-      artifact: ${{ steps.package.outputs.artifact }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -46,6 +44,6 @@ jobs:
           name: v1.0.0
           tag_name: v1.0.0
           files: |
-            ${{needs.build_mac.outputs.artifact}}
+            ${{needs.build_mac.steps.package.outputs.artifact}}
             release.txt
             LICENSE
