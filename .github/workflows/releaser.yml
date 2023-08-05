@@ -92,7 +92,9 @@ jobs:
         name: Output the artifact
         run: echo "artifact=horcrust-${{ github.ref_name }}-aarch64-pc-windows-msvc.zip" >> $GITHUB_OUTPUT
       - name: test
-        run: dir
+        run: |
+          dir
+          echo ${{ steps.package.outputs.artifact }}
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
