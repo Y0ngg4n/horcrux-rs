@@ -1,13 +1,123 @@
-name: Main
+name: Rust Release Workflow
 
-on: push
+on:
+  push:
+    branches:
+      - main
 
 jobs:
-  build:
+  release:
+    name: Create Release and Build Artifacts
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Build on Ubuntu
+        run: cargo build --release
+
+      - name: Archive Ubuntu Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: ubuntu-artifact
+          path: target/release/your_program_name
+
+  build_windows:
+    name: Build on Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Build on Windows
+        run: cargo build --release
+
+      - name: Archive Windows Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows-artifact
+          path: target/release/your_program_name.exe
+
+  build_mac:
+    name: Build on macOS
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Build on macOS
+        run: cargo build --release
+
+      - name: Archive macOS Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: macos-artifact
+          path: target/release/your_program_name
+
+  create_release:
+    name: Create GitHub Release
+    needs: [release, build_windows, build_mac]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v1.0.0  # Replace with your desired release tag
+          release_name: Release v1.0.0  # Replace with your desired release name
+          draft: false
+          prerelease: false
+
+      - name: Attach Ubuntu Artifact to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: target/release/your_program_name
+          asset_name: your_program_name
+
+      - name: Attach Windows Artifact to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: target/release/your_program_name.exe
+          asset_name: your_program_name.exe
+          
+      - name: Attach macOS Artifact to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: target/release/your_program_name
+          asset_name: hx
+
+
+
