@@ -13,7 +13,6 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        # Add other configurations here if needed
 
     steps:
       - name: Checkout code
