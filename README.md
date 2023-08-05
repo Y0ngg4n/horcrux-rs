@@ -25,4 +25,9 @@ hx bind ../secrets
 ```
 
 ### Installation 
+Build from source 
 
+```sh
+cargo build --release
+sudo mv ./target/release/hx ~/usr/local/bin
+```
