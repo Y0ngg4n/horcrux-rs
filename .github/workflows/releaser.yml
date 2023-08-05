@@ -38,7 +38,11 @@ jobs:
       - name: Build
         run: echo ${{ github.sha }} > release.txt
       - name: Test
-        run: cat release.txt
+        env: 
+          ARTIFACT: ${{needs.build_mac.outputs.artifact}}
+        run: |
+          cat release.txt
+          echo $ARTIFACT
       - name: Release
         uses: softprops/action-gh-release@v1
         env: 
