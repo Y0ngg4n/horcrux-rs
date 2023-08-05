@@ -26,7 +26,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: ubuntu-artifact
-          path: target/release/your_program_name
+          path: target/release/hx
 
   build_windows:
     name: Build on Windows
@@ -48,7 +48,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: windows-artifact
-          path: target/release/your_program_name.exe
+          path: target/release/hx
 
   build_mac:
     name: Build on macOS
@@ -70,7 +70,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: macos-artifact
-          path: target/release/your_program_name
+          path: target/release/hx
 
   create_release:
     name: Create GitHub Release
@@ -87,8 +87,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v1.0.0  # Replace with your desired release tag
-          release_name: Release v1.0.0  # Replace with your desired release name
+          tag_name: v1.0.0  #Cargo id replace
+          release_name: Release v1.0.0  
           draft: false
           prerelease: false
 
@@ -98,8 +98,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: target/release/your_program_name
-          asset_name: your_program_name
+          asset_path: target/release/hx
+          asset_name: hxx
 
       - name: Attach Windows Artifact to Release
         uses: actions/upload-release-asset@v1
@@ -107,8 +107,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: target/release/your_program_name.exe
-          asset_name: your_program_name.exe
+          asset_path: target/release/hx
+          asset_name: hx.exe
           
       - name: Attach macOS Artifact to Release
         uses: actions/upload-release-asset@v1
@@ -116,7 +116,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: target/release/your_program_name
+          asset_path: target/release/hx
           asset_name: hx
 
 
