@@ -74,7 +74,7 @@ jobs:
 
   create_release:
     name: Create GitHub Release
-    needs: [release, build_windows, build_mac]
+    needs: [build_ubuntu, build_windows, build_mac]
     runs-on: ubuntu-latest
     permissions: 
       contents: write
