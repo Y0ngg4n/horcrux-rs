@@ -77,9 +77,6 @@ jobs:
       - name: Build on windows
         run: cargo build --release
 
-      - name: Create zip archive
-        run: Compress-Archive -Path "target/release/hx.exe" -DestinationPath "horcrust-${{ github.ref_name }}-aarch64-pc-windows-msvc.tar.gz"
-
       - name: Create artifact folder
         run: |
           mkdir artifact
