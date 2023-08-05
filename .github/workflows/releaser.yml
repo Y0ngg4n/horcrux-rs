@@ -43,6 +43,7 @@ jobs:
         # if: startsWith(github.ref, 'refs/tags/')
         with:
           name: v1.0.0
+          tag_name: v1.0.0
           files: |
             ${{needs.build_mac.outputs.artifact}}
             release.txt
