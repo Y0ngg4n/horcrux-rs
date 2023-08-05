@@ -43,7 +43,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         env: 
           ARTIFACT: ${{needs.job1.outputs.artifact}}
-          OUTPUT2: ${{needs.job1.outputs.output2}}
         # if: startsWith(github.ref, 'refs/tags/')
         with:
           name: v1.0.0
