@@ -22,7 +22,7 @@ jobs:
       - name: Build on macOS
         run: cargo build --release
       - name: Zip artifact
-        run: tar -czf hx-1.0.0-x86_64-apple-darwin.tar.gz ./target/release/hx
+        run: tar -czf hx-1.0.0-x86_64-apple-darwin.tar.gz target/release/hx
       - id: package
         name: Output the artifact
         run: echo "artifact=hx-1.0.0-x86_64-apple-darwin.tar.gz" >> $GITHUB_OUTPUT
