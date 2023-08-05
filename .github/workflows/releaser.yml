@@ -42,14 +42,14 @@ jobs:
         uses: actions/checkout@v3
       - name: Create release file
         run: echo ${{ github.sha }} > RELEASE.txt
-      - name: Test
-        run: |
-          cat RELEASE.txt
-          ls
       - name: Download artifact
         uses: actions/download-artifact@v2
         with:
           name: ${{needs.build_mac.outputs.artifact}}
+      - name: Test
+        run: |
+          cat RELEASE.txt
+          ls
       - name: Release
         uses: softprops/action-gh-release@v1
         # if: startsWith(github.ref, 'refs/tags/')
