@@ -45,21 +45,19 @@ jobs:
       - name: Test
         run: |
           cat RELEASE.txt
-          echo $ARTIFACT
+          ls
       - name: Download artifact
         uses: actions/download-artifact@v2
         with:
           name: ${{needs.build_mac.outputs.artifact}}
       - name: Release
         uses: softprops/action-gh-release@v1
-        env: 
-          ARTIFACT: ${{needs.build_mac.outputs.artifact}}
         # if: startsWith(github.ref, 'refs/tags/')
         with:
           name: v1.0.0
           tag_name: v1.0.0
           files: |
-            $ARTIFACT
+            ${{ needs.build_mac.outputs.artifact }}
             RELEASE.txt
             LICENSE
   
