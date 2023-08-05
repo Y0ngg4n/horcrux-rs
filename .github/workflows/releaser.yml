@@ -3,13 +3,14 @@ on:
   workflow_dispatch:
   push:
     tags:
-    - '*'
+      - "v*"
 
 jobs:
   build_mac:
     name: Build for macOS
     runs-on: macos-latest
-
+    outputs:
+      artifact: ${{ steps.package.outputs.artifact }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -22,7 +23,7 @@ jobs:
         run: cargo build --release
       - name: Zip artifact
         run: tar -czf hx-1.0.0-x86_64-apple-darwin.tar.gz ./target/release/hx
-      - id: artifact
+      - id: package
         name: Output the artifact
         run: echo "artifact=hx-1.0.0-x86_64-apple-darwin.tar.gz" >> $GITHUB_OUTPUT
   create_release:
