@@ -37,7 +37,7 @@ jobs:
         run: |
           mkdir tools
           cp "target/release/horcrust.exe" tools/
-          cp "LICENSE" tools/
+          cp "LICENSE.txt" tools/
       - name: Generate nuspec template
         run: |
           echo '
