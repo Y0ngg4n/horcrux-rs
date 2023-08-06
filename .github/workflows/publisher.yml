@@ -28,14 +28,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Download windows artifact
-        uses: actions/download-artifact@v2
-        with:
-          name: horcrust-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip
+      - name: Install rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build on windows
+        run: cargo build --release
       - name: Set up chocolatey workspace # Download artifact unzip, and move to tools directory. 
         run: |
           mkdir tools
-          Expand-Archive -Path 'horcrust-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip' -DestinationPath 'tools'
+          cp "target/release/horcrust.exe" tools/
           cp "LICENSE" tools/
       - name: Generate nuspec template
         run: |
