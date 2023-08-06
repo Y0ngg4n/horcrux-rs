@@ -89,7 +89,7 @@ jobs:
 
       - id: package
         name: Output the artifact
-        run: echo "artifact=horcrust-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        run: echo "artifact=horcrust-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip" >> $env:GITHUB_ENV
       
       - name: Upload artifact
         uses: actions/upload-artifact@v2
