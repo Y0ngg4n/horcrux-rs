@@ -40,22 +40,21 @@ jobs:
           cp "LICENSE.txt" tools/
       - name: Generate nuspec template
         run: |
-          echo ' 
-          <?xml version="1.0" encoding="UTF-8"?>
-          <package>
-            <metadata>
-                <id>horcrust</id>
-                <version>${{ github.ref_name }}</version>
-                <title>horcrust</title>
-                <authors>ccline</authors>
-                <projectUrl>https://github.com/codycline/horcrux-rs</projectUrl>
-                <description>Horcrust is a command-line-tool which splits a file into encrypted shards for safekeeping. As long as the specified threshold is met, a user can resurrect their original file at any time - no password necessary.</description>
-                <tags>encryption cli rust</tags>
-            </metadata>
-            <files>
-                <file src="tools\**" target="tools" />
-            </files>
-          </package>
+          echo '<?xml version="1.0"?>' > horcrust.nuspec
+          echo '<package>' >> horcrust.nuspec
+          echo '  <metadata>' >> horcrust.nuspec
+          echo '    <id>horcrust</id>' >> horcrust.nuspec
+          echo '    <version>${{ github.ref_name }}</version>' >> horcrust.nuspec
+          echo '    <title>horcrust</title>' >> horcrust.nuspec
+          echo '    <authors>ccline</authors>' >> horcrust.nuspec
+          echo '    <projectUrl>https://github.com/codycline/horcrux-rs</projectUrl>' >> horcrust.nuspec
+          echo '    <description>Horcrust is a command-line-tool which splits a file into encrypted shards for safekeeping. As long as the specified threshold is met, a user can resurrect their original file at any time - no password necessary.</description>' >> horcrust.nuspec
+          echo '    <tags>encryption cli rust</tags>' >> horcrust.nuspec
+          echo '  </metadata>' >> horcrust.nuspec
+          echo '  <files>' >> horcrust.nuspec
+          echo '    <file src="tools\**" target="tools" />' >> horcrust.nuspec
+          echo '  </files>' >> horcrust.nuspec
+          echo '</package>' >> horcrust.nuspec
           ' > horcrust.nuspec
       - name: Create VERIFICATION.txt
         run: |
