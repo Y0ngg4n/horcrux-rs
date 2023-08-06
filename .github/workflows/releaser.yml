@@ -79,17 +79,20 @@ jobs:
       - name: Build on windows
         run: cargo build --release
 
-      - name: Compress artifact
+      - name: Copy artifacts
         run: |
           mkdir artifact
           cp "target/release/horcrust.exe" artifact/
           cp "LICENSE.txt" artifact/
-          Compress-Archive -Path "artifact/*" -DestinationPath "horcrust-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip"
+        
         working-directory: ${{ github.workspace }}
 
+      - name: Compress artifact
+        run: Compress-Archive -Path "artifact/*" -DestinationPath "horcrust-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip"
+      
       - id: package
         name: Output the artifact
-        run: echo "artifact=horcrust-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip" >> $env:GITHUB_ENV
+        run: echo "artifact=horcrust-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
       
       - name: Upload artifact
         uses: actions/upload-artifact@v2
