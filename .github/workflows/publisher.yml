@@ -28,7 +28,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Build and package binary # Download artifact unzip, and move to tools directory. 
+      - name: Download windows artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: horcrust-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip
+      - name: Set up chocolatey workspace # Download artifact unzip, and move to tools directory. 
         run: |
           mkdir tools
           Expand-Archive -Path 'horcrust-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip' -DestinationPath 'tools'
