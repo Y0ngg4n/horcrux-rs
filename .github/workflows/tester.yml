@@ -1,5 +1,4 @@
-name: Testing CI
-
+name: Tester
 on:
   push:
     branches:
@@ -18,10 +17,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
+      - name: Install rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Run all tests
         run: cargo test -- --test-threads=1
