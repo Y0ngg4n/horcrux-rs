@@ -17,7 +17,7 @@ pub static BANNER: &str = " ██░ ██  ▒█████   ██▀█�
 #[derive(Parser)]
 #[command(
     name="horcrust",
-    bin_name="hx", 
+    bin_name="horcrust", 
     version = option_env!("CARGO_PKG_VERSION").unwrap_or("dev"),
     about = "Split a file into encrypted shards, no password required - secrecy preserved.", 
     long_about = "Horcrust is an encryption program that splits a file into encrypted shards. Users can set a threshold, defining the number required for secret recovery, eliminating the need for passwords. Horcrust supports piped input. For example, you can use it like this: cat secret.txt | hx split -s 3 -t 2.",
