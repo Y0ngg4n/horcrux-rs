@@ -90,7 +90,7 @@ jobs:
       
       - id: package
         name: Output the artifact
-        run: echo ("artifact=" + horcrust-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip) >> $env:GITHUB_OUTPUT
+        run: echo ("artifact=horcrust-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip") >> $env:GITHUB_OUTPUT
       - name: test
         run: |
           dir
