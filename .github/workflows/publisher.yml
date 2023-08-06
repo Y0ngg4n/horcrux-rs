@@ -62,7 +62,7 @@ jobs:
       - name: Create chocolatey package
         run: choco pack horcrust.nuspec
       - name: Publish on chocolatey
-        run: choco push horcrust.${{ github.ref_name }}.nupkg -s https://push.chocolatey.org/ --api-key=${{ secrets.CHOCOLATEY_API_KEY }}
+        run: choco push horcrust.1.0.0.nupkg -s https://push.chocolatey.org/ --api-key=${{ secrets.CHOCOLATEY_API_KEY }}
 
   # brewster:
   #   name: Upload to chocolatey!. Chocolate time!
