@@ -2,38 +2,49 @@ name: Publisher
 on:
   workflow_dispatch:
   release:
-    types:
-      - published
+    types: [published] 
 jobs:
-  cratey:
-    name: Upload to crates.io
+  crates:
+    name: 📦 Upload to crates.io 📦
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
 
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
+      - name: Install rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
-      - run: cargo publish --token ${CRATES_TOKEN}
+      - name: Get published crate version from crates.io
+        run: |
+          echo PUBLISHED_VERSION=$(cargo search horcrust | grep horcrust |  awk '{print $3}' | tr -d '"') >> $GITHUB_OUTPUT
+      
+      - name: Get local cargo version from Cargo.toml
+        run: |
+          echo LOCAL_VERSION=$(grep -oP '^version = "\K[^"]+' Cargo.toml)
+      
+      #In case of manual trigger this ensures we don't try to publish the exact crate
+      - run: cargo publish --token ${CRATES_TOKEN} 
+        if: ${{ env.LOCAL_VERSION != env.PUBLISHED_VERSION }}
         env:
           CRATES_TOKEN: ${{ secrets.CRATES_TOKEN }}
   chocolatey:
-    name: Upload to chocolatey!. Chocolate time!
+    name: 🍫 Upload to chocolatey. Chocolate time! 🍫🍫🍫
     runs-on: windows-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+
+      - name: Normalize release version #removes the v prefix
+        run: |
+          $currentTag = '${{ github.ref_name }}'
+          echo ("VERSION=" + $currentTag.replace('v', '')) | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+      
       - name: Install rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
       - name: Build on windows
         run: cargo build --release
-      - name: Set up chocolatey workspace # Download artifact unzip, and move to tools directory. 
+      - name: Set up chocolatey workspace 
         run: |
           mkdir tools
           cp "target/release/horcrust.exe" tools/
@@ -44,7 +55,7 @@ jobs:
           echo '<package>' >> horcrust.nuspec
           echo '  <metadata>' >> horcrust.nuspec
           echo '    <id>horcrust</id>' >> horcrust.nuspec
-          echo '    <version>${{ github.ref_name }}</version>' >> horcrust.nuspec
+          echo '    <version>${{ env.VERSION }}</version>' >> horcrust.nuspec
           echo '    <title>horcrust</title>' >> horcrust.nuspec
           echo '    <authors>ccline</authors>' >> horcrust.nuspec
           echo '    <projectUrl>https://github.com/codycline/horcrux-rs</projectUrl>' >> horcrust.nuspec
@@ -62,11 +73,36 @@ jobs:
       - name: Create chocolatey package
         run: choco pack horcrust.nuspec
       - name: Publish on chocolatey
-        run: choco push horcrust.1.0.0.nupkg -s https://push.chocolatey.org/ --api-key=${{ secrets.CHOCOLATEY_API_KEY }}
+        run: choco push horcrust.${{ env.VERSION }}.nupkg -s https://push.chocolatey.org/ --api-key=${{ secrets.CHOCOLATEY_API_KEY }}
 
-  # brewster:
-  #   name: Upload to chocolatey!. Chocolate time!
+  # brew:
+  #   name: 🍺 Publish to homebrew 🍺
   #   runs-on: macos-latest
   #   steps:
-  #     - name: bump brew
-  #       run: ''
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+
+  #     - name: Install rust toolchain
+  #       uses: dtolnay/rust-toolchain@stable
+
+  #     - name: Build on macos
+  #       run: cargo build --release
+      
+  #     - name: Compress artifact
+  #       run: |
+  #         cp target/release/horcrust .
+  #         tar -czf horcrust-${{ github.ref_name }}-apple-darwin.tar.gz horcrust
+      
+  #     - name: Set shasum 
+  #       run: echo SHASUM=$(shasum horcrust-${{ github.ref_name }}-apple-darwin.tar.gz | awk '{printf $1}') >> $GITHUB_OUTPUT
+      
+  #     - name: 🍺 Bump Brew
+        
+  #       run: |
+  #         brew tap tgotwig/homebrew-vidmerger
+  #         brew bump-formula-pr -f --version=${{ steps.get_version.outputs.version }} --no-browse --no-audit \
+  #         --sha256=${{ env.SHASUM }} \
+  #         --url='https://github.com/tgotwig/vidmerger/releases/download/${{ steps.get_version.outputs.version }}/vidmerger-mac.tar.gz' \
+  #         tgotwig/homebrew-vidmerger/vidmerger
+  #       env:
+  #         BREW_TOKEN: ${{ secrets.BREW_TOKEN }}
