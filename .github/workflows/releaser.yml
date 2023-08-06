@@ -85,12 +85,12 @@ jobs:
         working-directory: ${{ github.workspace }}
 
       - name: Zip artifact
-        run: Compress-Archive -Path "artifact/*" -DestinationPath "horcrust-${{ github.ref_name }}-aarch64-pc-windows-msvc.zip"
+        run: Compress-Archive -Path "artifact/*" -DestinationPath "horcrust-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip"
         working-directory: ${{ github.workspace }}
       
       - id: package
         name: Output the artifact
-        run: echo "artifact=horcrust-${{ github.ref_name }}-aarch64-pc-windows-msvc.zip" >> $GITHUB_OUTPUT
+        run: echo ("artifact=" + horcrust-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip) >> $env:GITHUB_OUTPUT
       - name: test
         run: |
           dir
