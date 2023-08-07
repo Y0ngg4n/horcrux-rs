@@ -92,7 +92,7 @@ jobs:
       - name: 🍺 Bump Brew
         
         run: |
-          brew tap codycline/homebrew-tap
+          brew tap codycline/homebrew-taps
           brew bump-formula-pr -f --version=${{ github.ref_name }} --no-browse --no-audit \
           --sha256=${{ steps.shashum.outputs.sha }} \
           --url='https://github.com/codycline/horcrux-rs/releases/download/${{ github.ref_name }}/horcrust-${{ github.ref_name }}-apple-darwin.tar.gz' \
