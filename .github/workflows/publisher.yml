@@ -96,7 +96,7 @@ jobs:
         
         run: |
           brew tap codycline/homebrew-taps
-          brew bump-formula-pr -f --version=${{ env.VERSION }} --no-browse --no-audit \
+          brew bump-formula-pr -f --version=${{ env.version }} --no-browse --no-audit \
           --sha256=${{ steps.shashum.outputs.sha }} \
           --url='https://github.com/codycline/horcrux-rs/releases/download/${{ github.ref_name }}/horcrust-${{ github.ref_name }}-apple-darwin.tar.gz' \
           codycline/homebrew-taps/horcrust
