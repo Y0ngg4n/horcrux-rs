@@ -96,6 +96,6 @@ jobs:
           brew bump-formula-pr -f --version=${{ github.ref_name }} --no-browse --no-audit \
           --sha256=${{ steps.shashum.outputs.sha }} \
           --url='https://github.com/codycline/horcrux-rs/releases/download/${{ github.ref_name }}/horcrust-${{ github.ref_name }}-apple-darwin.tar.gz' \
-          tgotwig/homebrew-vidmerger/vidmerger
+          codycline/homebrew-taps/horcrust
         env:
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.BREW_TOKEN }}
