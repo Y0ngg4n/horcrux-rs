@@ -87,13 +87,13 @@ jobs:
           Compress-Archive -Path "artifact/*" -DestinationPath "horcrust-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip"
         working-directory: ${{ github.workspace }}
 
-      - name: Test 
-        run: dir
-      
       - id: package
         name: Output the artifact
-        run: echo "artifact=horcrust-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-      
+        run: echo ("artifact=horcrust-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip") >> $env:GITHUB_OUTPUT
+      - name: test
+        run: |
+          dir
+          echo ${{ steps.package.outputs.artifact }}
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
