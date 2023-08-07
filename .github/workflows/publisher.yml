@@ -88,12 +88,15 @@ jobs:
       
       - id: shasum 
         run: echo sha=$(shasum -a 256 horcrust-${{ github.ref_name }}-apple-darwin.tar.gz | awk '{printf $1}') >> $GITHUB_OUTPUT
-      
+      - name: Normalize version
+        run: |
+          TAG=${{ github.event.release.tag_name }}
+          echo "version=${TAG#v}" >> $GITHUB_ENV
       - name: 🍺 Bump Brew
         
         run: |
           brew tap codycline/homebrew-taps
-          brew bump-formula-pr -f --version=${{ github.ref_name }} --no-browse --no-audit \
+          brew bump-formula-pr -f --version=${{ env.VERSION }} --no-browse --no-audit \
           --sha256=${{ steps.shashum.outputs.sha }} \
           --url='https://github.com/codycline/horcrux-rs/releases/download/${{ github.ref_name }}/horcrust-${{ github.ref_name }}-apple-darwin.tar.gz' \
           codycline/homebrew-taps/horcrust
