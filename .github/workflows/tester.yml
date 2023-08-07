@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-and-test:
-    name: Test platform
+    name: 🧪 Test platform
     runs-on: ${{ matrix.os }}
 
     strategy:

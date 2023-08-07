@@ -8,7 +8,7 @@ on:
 
 jobs:
   mac:
-    name: Build for macOS
+    name: 🍎 Build for macOS 🔧
     runs-on: macos-latest
     outputs:
       artifact: ${{ steps.package.outputs.artifact }}
@@ -36,7 +36,7 @@ jobs:
           name: ${{ steps.package.outputs.artifact }}
           path: ${{ steps.package.outputs.artifact }}
   linux:
-    name: Build for linux
+    name: 🐧 Build for linux 🔧
     runs-on: ubuntu-latest
     outputs:
       artifact: ${{ steps.package.outputs.artifact }}
@@ -65,7 +65,7 @@ jobs:
           name: ${{ steps.package.outputs.artifact }}
           path: ${{ steps.package.outputs.artifact }}
   windows:
-    name: Build for windows
+    name: 🪟 Build for windows 🔧
     runs-on: windows-latest
     outputs:
       artifact: ${{ steps.package.outputs.artifact }}
@@ -90,10 +90,6 @@ jobs:
       - id: package
         name: Output the artifact
         run: echo ("artifact=horcrust-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip") >> $env:GITHUB_OUTPUT
-      - name: test
-        run: |
-          dir
-          echo ${{ steps.package.outputs.artifact }}
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
@@ -101,7 +97,7 @@ jobs:
           path: ${{ steps.package.outputs.artifact }}
   
   release:
-    name: Create GitHub Release
+    name: 🏷️ Create GitHub release 📃
     needs: [mac, windows, linux]
     runs-on: ubuntu-latest
     permissions: 

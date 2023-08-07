@@ -14,17 +14,7 @@ jobs:
       - name: Install rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Get published crate version from crates.io
-        run: |
-          echo PUBLISHED_VERSION=$(cargo search horcrust | grep horcrust |  awk '{print $3}' | tr -d '"') >> $GITHUB_OUTPUT
-      
-      - name: Get local cargo version from Cargo.toml
-        run: |
-          echo LOCAL_VERSION=$(grep -oP '^version = "\K[^"]+' Cargo.toml)
-      
-      #In case of manual trigger this ensures we don't try to publish the exact crate
       - run: cargo publish --token ${CRATES_TOKEN} 
-        if: ${{ env.LOCAL_VERSION != env.PUBLISHED_VERSION }}
         env:
           CRATES_TOKEN: ${{ secrets.CRATES_TOKEN }}
   chocolatey:
@@ -75,34 +65,37 @@ jobs:
       - name: Publish on chocolatey
         run: choco push horcrust.${{ env.VERSION }}.nupkg -s https://push.chocolatey.org/ --api-key=${{ secrets.CHOCOLATEY_API_KEY }}
 
-  # brew:
-  #   name: 🍺 Publish to homebrew 🍺
-  #   runs-on: macos-latest
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v2
+  brew:
+    name: 🍺 Publish to homebrew 🍺
+    runs-on: macos-latest
+    permissions:
+      contents: write
 
-  #     - name: Install rust toolchain
-  #       uses: dtolnay/rust-toolchain@stable
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
 
-  #     - name: Build on macos
-  #       run: cargo build --release
+      - name: Install rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build on macos
+        run: cargo build --release
       
-  #     - name: Compress artifact
-  #       run: |
-  #         cp target/release/horcrust .
-  #         tar -czf horcrust-${{ github.ref_name }}-apple-darwin.tar.gz horcrust
+      - name: Compress artifact
+        run: |
+          cp target/release/horcrust .
+          tar -czf horcrust-${{ github.ref_name }}-apple-darwin.tar.gz horcrust LICENSE.txt
       
-  #     - name: Set shasum 
-  #       run: echo SHASUM=$(shasum horcrust-${{ github.ref_name }}-apple-darwin.tar.gz | awk '{printf $1}') >> $GITHUB_OUTPUT
+      - id: shasum 
+        run: echo sha=$(shasum -a 256 horcrust-${{ github.ref_name }}-apple-darwin.tar.gz | awk '{printf $1}') >> $GITHUB_OUTPUT
       
-  #     - name: 🍺 Bump Brew
+      - name: 🍺 Bump Brew
         
-  #       run: |
-  #         brew tap tgotwig/homebrew-vidmerger
-  #         brew bump-formula-pr -f --version=${{ steps.get_version.outputs.version }} --no-browse --no-audit \
-  #         --sha256=${{ env.SHASUM }} \
-  #         --url='https://github.com/tgotwig/vidmerger/releases/download/${{ steps.get_version.outputs.version }}/vidmerger-mac.tar.gz' \
-  #         tgotwig/homebrew-vidmerger/vidmerger
-  #       env:
-  #         BREW_TOKEN: ${{ secrets.BREW_TOKEN }}
+        run: |
+          brew tap codycline/homebrew-tap
+          brew bump-formula-pr -f --version=${{ github.ref_name }} --no-browse --no-audit \
+          --sha256=${{ steps.shashum.outputs.sha }} \
+          --url='https://github.com/codycline/horcrux-rs/releases/download/${{ github.ref_name }}/horcrust-${{ github.ref_name }}-apple-darwin.tar.gz' \
+          tgotwig/homebrew-vidmerger/vidmerger
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.BREW_TOKEN }}
