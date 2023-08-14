@@ -7,7 +7,7 @@ This project is a Rust implementation of the original [horcrux](https://github.c
 ## Usage
 Horcrust only has 2 commands `split` and `bind`.
 
-### Splitting
+**Splitting**
 
 ```sh
 horcrust split classified.txt --shards 4 --threshold 2
@@ -25,14 +25,14 @@ You can specify where the shards can be placed using the optional `directory`` a
 horcrust split classified.txt --shards 4 --threshold 4 --destination ../../documents/stash
 ```
 
-### Binding
+**Binding**
 When you're ready to recover your secret do the following.
 ```sh
 horcrust bind ../secrets
 ```
 
 
-### Installation 
+## Installation 
 
 **Homebrew**
 
