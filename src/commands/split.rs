@@ -87,9 +87,12 @@ pub fn split(
         horcrux_files.push(horcrux_file);
     }
 
-    /* Strategy
-    1. In this state we have total `n` number of files only containing headers.
-    2. We will use the first file to write the encrypted contents into and then seek the first file after its formatted headers to copy the encrypted contents to the rest of the files.
+    /* Strategy:
+    In this state all the horcrux files contain their headers and an empty body.
+    In order to avoid calling `encrypt_file` on each file, instead, we
+    calculate the byte length after the header of the first file and store it as a variable. 
+    Next we encrypt the first file, and then use seek to skip over the index file headers and copy only the necessary contents to the rest.
+    This is possible because the body content is the same for each file.
     */
     let mut contents_to_encrypt = File::open(source)?;
     let mut initial_horcrux: &File = &horcrux_files[0];

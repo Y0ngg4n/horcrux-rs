@@ -44,8 +44,7 @@ pub fn is_qualified_file(f: &str) -> Result<PathBuf, String> {
 
 const CHUNK_SIZE: usize = 4096; // Set your desired chunk size here
 
-//This function expects a smaller sized file and reads it into a buffer
-//It then writes its contents to a temporary file and returns its location (path)
+//This function handles std input and reads the contents to a temporary file.
 pub fn handle_std_in() -> Result<PathBuf, std::io::Error> {
     let mut temp_path = temp_dir();
     let file_name = "secret.txt";

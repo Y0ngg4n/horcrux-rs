@@ -9,7 +9,7 @@ use std::{
     path::PathBuf,
 };
 
-//Strategy is to get all files ending in .horcrux or .hx and then parse them. Next we filter them by matching nonce
+//Strategy is to find all files ending in .horcrux or .hx and then parse them. Next we filter them by matching timestamp and index file name.
 fn find_horcrux_file_paths(directory: &PathBuf) -> Result<Vec<PathBuf>, std::io::Error> {
     let paths = fs::read_dir(directory)?;
 
@@ -32,8 +32,7 @@ fn find_horcrux_file_paths(directory: &PathBuf) -> Result<Vec<PathBuf>, std::io:
     Ok(horcruxes)
 }
 
-//Strategy is to find all horcrux files in a directory find any matches with the first one
-// And try recovery from there
+//Find all horcruxes in a directory that matches the first one found and attempt recovery.
 pub fn bind(source: &PathBuf, destination: &PathBuf) -> Result<(), anyhow::Error> {
     let horcrux_paths = find_horcrux_file_paths(source)?;
 

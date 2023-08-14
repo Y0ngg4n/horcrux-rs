@@ -35,9 +35,9 @@ impl Horcrux {
         }
     }
 
-    //This naively assumes you have already passed in a file ending in .horcrux
-    // Open the file, read over each line and extracting json content after reaching the -- HEADER -- marker. Stop scanning after reaching the -- BODY -- marker.
-    // Set the file read pointer (seek) to be after the body marker
+    //This naively assumes you have already passed in a file ending in .horcrux or .hx
+    // Open the file, read over each line and extract json content after reaching the -- HEADER -- marker. Stop scanning after reaching the -- BODY -- marker.
+    // Once the body marker is reached we set the read pointer of the file contents to be after the header using seek.
     pub fn from_path(path: &Path) -> Result<Self, std::io::Error> {
         let mut file: File = OpenOptions::new().read(true).append(true).open(path)?;
 
@@ -74,7 +74,7 @@ impl Horcrux {
     }
 }
 
-//Refactor this into the struct and call it as a method
+
 pub fn formatted_header(index: u8, total: u8, json_header: String) -> String {
     let remaining = total - 1;
     let header = format!("?? THIS FILE IS A HORCRUX. \n?? IT IS ONE OF {total} HORCRUXES THAT EACH CONTAIN PART OF AN ORIGINAL FILE. \n?? THIS IS HORCRUX NUMBER {index} of {total}. \n?? IN ORDER TO RESURRECT THIS ORIGINAL FILE YOU MUST FIND THE OTHER {remaining} HORCRUXES AND THEN BIND THEM USING THE PROGRAM FOUND AT THE FOLLOWING URL \n?? https://github.com \n \n-- HEADER --\n{json_header} \n-- BODY --\n");

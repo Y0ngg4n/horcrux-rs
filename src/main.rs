@@ -29,7 +29,7 @@ fn main() {
 
             let source: PathBuf;
 
-            //Check if std input exists
+            //Check if std input exists first, then check if its 
             if isnt(Stream::Stdin) {
                 let piped_source = handle_std_in().unwrap();
                 source = piped_source;
