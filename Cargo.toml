@@ -19,7 +19,7 @@ atty = "0.2.14"
 
 [lib]
 name="horcrust"
-crate-type = ["lib"]
+crate-type = ["dylib"]
 
 [dev-dependencies]
 sha2 = "0.10.7"
